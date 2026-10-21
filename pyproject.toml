@@ -1,32 +1,36 @@
 [project]
-name = "treeolive"
+name = "djangX"
 version = "0.1.0.dev1"
 description = "Add your description here"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = ["django>=6.1.2"]
 
 [project.scripts]
-treeolive = "treeolive:main"
-toli = "treeolive:main"
+djangx = "djangx:main"
+djx = "djangx:main"
 
 [build-system]
-requires = ["uv_build>=0.13.1,<0.14.0"]
+requires = ["uv_build>=0.13.4,<0.14.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = ["poethepoet>=0.49.0"]
 
+[tool.uv]
+preview-features = ["format-command", "check-command"]
+
 [tool.poe.tasks.format]
-sequence = [{ cmd = "uv format --preview-features format-command" }]
+sequence = [{ cmd = "uv format" }]
 
 [tool.poe.tasks.lint]
 sequence = [
+    { cmd = "uv format --check" },
     { cmd = "uv lock --check" },
-    { cmd = "uv check --preview-features check-command" },
+    { cmd = "uv check" },
 ]
 
 [[tool.uv.index]]
