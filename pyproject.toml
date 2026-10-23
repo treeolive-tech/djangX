@@ -1,24 +1,50 @@
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[project.urls]
+repository = "https://github.com/treeolive-tech/djangX.git"
+
 [project]
 name = "djangX"
-version = "0.1.0.dev2"
-description = "Add your description here"
+version = "0.1.0.dev6"
+description = ""
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
 requires-python = ">=3.14"
-dependencies = ["django>=6.1.2"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["django>=6.1.2", "pillow>=13.0.0", "python-dotenv>=1.2.4"]
 
-[project.scripts]
-djangx = "djangx.entrypoints.cli:main"
-djx = "djangx.entrypoints.cli:main"
-
-[build-system]
-requires = ["uv_build>=0.13.4,<0.14.0"]
-build-backend = "uv_build"
+[project.optional-dependencies]
+postgres = ["psycopg[binary,pool]>=3.3.6"]
+vercel = ["psycopg[binary,pool]>=3.3.6", "vercel>=0.12.0"]
 
 [dependency-groups]
-dev = ["poethepoet>=0.49.0"]
+dev = [
+    "django-browser-reload>=1.21.0",
+    "django-http-compression[brotli]>=1.4.0",
+    "django-minify-html>=1.14.0",
+    "django-stubs>=6.1.2",
+    "djlint>=1.47.0",
+    "poethepoet>=0.49.0",
+
+    # rest framework
+    "djangorestframework>=3.18.3",
+    "django-filter>=26.2",
+    "markdown>=3.11.2",
+]
+
+[project.scripts]
+djangx = "djangx.core.management:main"
+djx = "djangx.core.management:main"
 
 [tool.uv]
 preview-features = ["format-command", "check-command"]
@@ -32,6 +58,17 @@ sequence = [
     { cmd = "uv lock --check" },
     { cmd = "uv check" },
 ]
+
+[tool.djlint]
+format_css = true
+format_js = true
+custom_blocks = "body,aside,header,footer,main,section,list"
+blank_line_before_tag = "block,list"
+blank_line_after_tag = "endblock,endlist"
+ignore = "H016,H030,H031"
+
+[tool.ruff]
+exclude = ["*/migrations/*"]
 
 [[tool.uv.index]]
 name = "testpypi"
