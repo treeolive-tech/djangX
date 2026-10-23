@@ -4,7 +4,7 @@ from sys import argv
 
 from ... import Package
 from ..utils import DJANGO_SETTINGS_MODULE, ExitCode, print_version
-from .commands import BUILTIN_COMMANDS, HELP_COMMANDS
+from .commands import HELP_COMMANDS, SCRIPT_COMMANDS
 
 
 def _run_builtin() -> None:
@@ -81,7 +81,7 @@ def main() -> None:
         case "-v" | "--version" | "version":
             raise SystemExit(print_version(Package.name))
 
-        case _ if command in BUILTIN_COMMANDS:
+        case _ if command in SCRIPT_COMMANDS:
             _run_builtin()
 
         case _:
