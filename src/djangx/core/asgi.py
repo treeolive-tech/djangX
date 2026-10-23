@@ -1,10 +1,10 @@
 """
 ASGI config.
 
-It exposes the ASGI callable as a module-level variable named ``app``.
+It exposes the ASGI callable as a module-level variable named ``application``.
 
 For more information on this file, see
-https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
+https://docs.djangoproject.com/en/6.1/howto/deployment/asgi/
 """
 
 from os import environ
