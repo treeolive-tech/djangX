@@ -1,0 +1,11 @@
+# Cache
+__pycache__/
+
+# SQLite database
+/db.sqlite3
+
+# Static & media files
+/public/
+
+# Environment
+/.env*

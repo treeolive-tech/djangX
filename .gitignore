@@ -1,6 +1,5 @@
-/.venv/
 /.ruff_cache/
-__pycache__/
+/.venv/
 /dist/
 /uv.lock
 .tmp/

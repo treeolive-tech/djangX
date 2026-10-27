@@ -1,0 +1,25 @@
+[project]
+name = "djangX-app"
+version = "0.1.0"
+readme = "README.md"
+settings = "app.settings"
+authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "djangx[vercel]>=0.1.0.dev7",
+    "django-dart-sass",
+    "django-http-compression[brotli]>=1.4.0",
+    "django-minify-html>=1.14.0",
+    "django-browser-reload>=1.21.0",
+    # rest framework
+    "djangorestframework>=3.18.3",
+    "django-filter>=26.2",
+    "markdown>=3.11.2",
+]
+
+[tool.vercel.scripts]
+build = "npm i -g sass-embedded && djx sass --build && djx migrate --noinput"
+
+[tool.uv.sources]
+djangx = { workspace = true }
+django-dart-sass = { git = "https://github.com/kvnwaks/django-dart-sass.git", branch = "djv6-support" }

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[project.urls]
+repository = "https://github.com/treeolive-tech/djangX.git"
+
+[project.scripts]
+djangx = "djangx.core.management:main"
+djx = "djangx.core.management:main"
+
+[project]
+name = "djangX"
+version = "0.1.0.dev8"
+description = ""
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
+requires-python = ">=3.14"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "django>=6.1.2",
+    "django-dart-sass",
+    "pillow>=13.0.0",
+    "python-dotenv>=1.2.4",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary,pool]>=3.3.6"]
+vercel = ["psycopg[binary,pool]>=3.3.6", "vercel>=0.12.1"]
+
+[tool.uv.sources]
+django-dart-sass = { git = "https://github.com/kvnwaks/django-dart-sass.git", branch = "djv6-support" }
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
