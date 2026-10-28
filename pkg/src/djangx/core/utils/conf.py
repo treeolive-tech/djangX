@@ -3,15 +3,12 @@
 from pathlib import Path
 from tomllib import load
 from typing import Any, ClassVar
+from warnings import warn
 
-from django.conf import settings
-
-__all__: list[str] = ["DJANGO_SETTINGS_MODULE", "Settings"]
+__all__: list[str] = ["DJANGO_SETTINGS_MODULE", "Conf"]
 
 
-class Settings:
-    _USED_HOME_URL: ClassVar[bool] = False
-
+class Conf:
     # `djangx.core` must come before `django.contrib.staticfiles` so its `runserver` wins.
     _REQUIRED_APPS: ClassVar[list[str]] = [
         "django_minify_html",
@@ -32,12 +29,24 @@ class Settings:
         "django_browser_reload.middleware.BrowserReloadMiddleware"
     )
 
+    # Contents of the generated `asgi.py` / `wsgi.py`; `{kind}` is "asgi" or "wsgi".
+    _ENTRYPOINT: ClassVar[str] = """\
+from os import environ
+
+from django.core.{kind} import get_{kind}_application
+from djangx.core.utils import DJANGO_SETTINGS_MODULE
+
+assert DJANGO_SETTINGS_MODULE is not None
+environ.setdefault("DJANGO_SETTINGS_MODULE", DJANGO_SETTINGS_MODULE)
+application = get_{kind}_application()
+"""
+
     def __init__(self) -> None:
         """Load `pyproject.toml` from the working directory, or use empty data.
 
         Examples::
 
-            Settings().path  # Path("/home/kevin/olyv/pyproject.toml")
+            Conf().path  # Path("/home/kevin/olyv/pyproject.toml")
         """
         self.path: Path = Path.cwd() / "pyproject.toml"
         self._data: dict[str, Any] = {}
@@ -51,8 +60,8 @@ class Settings:
 
         Examples::
 
-            Settings()._get_str("project", "name")  # "olyv"
-            Settings()._get_str("project", "version")  # None (not set)
+            Conf()._get_str("project", "name")  # "olyv"
+            Conf()._get_str("project", "version")  # None (not set)
         """
         value: Any = self._data
         for key in keys:
@@ -67,8 +76,8 @@ class Settings:
 
         Examples::
 
-            Settings._discover_apps(Path("/srv/site/app"))  # ["app.blog", "app.main"]
-            Settings._discover_apps(Path("/srv/empty"))  # []
+            Conf._discover_apps(Path("/srv/site/app"))  # ["app.blog", "app.main"]
+            Conf._discover_apps(Path("/srv/empty"))  # []
         """
         if not app_dir.is_dir():
             return []
@@ -84,24 +93,24 @@ class Settings:
 
         Examples::
 
-            Settings().module  # "app.settings"
+            Conf().module  # "app.settings"
         """
         return self._get_str("project", "settings")
 
     @classmethod
     def installed_apps(
-        cls, defaults: list[str], *, app_dir: Path, debug: bool = False
+        cls, defaults: list[str], *, dir: Path, debug: bool = False
     ) -> list[str]:
         """Return auto-discovered `app.*` apps, then `defaults`, then djangX's apps.
 
         Examples::
 
-            Settings.installed_apps(["django.contrib.auth"], app_dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "django_minify_html", ..., "django.contrib.staticfiles"]
+            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "django_minify_html", ..., "django.contrib.staticfiles"]
         """
         ours: list[str] = (
             [cls._RELOAD_APP, *cls._REQUIRED_APPS] if debug else cls._REQUIRED_APPS
         )
-        found: list[str] = cls._discover_apps(app_dir)
+        found: list[str] = cls._discover_apps(dir)
         return [*(app for app in [*found, *defaults] if app not in ours), *ours]
 
     @classmethod
@@ -110,43 +119,56 @@ class Settings:
 
         Examples::
 
-            Settings.middleware(["django.middleware.security.SecurityMiddleware"])  # [..., "...HttpCompressionMiddleware", "...MinifyHtmlMiddleware"]
+            Conf.middleware(["django.middleware.security.SecurityMiddleware"])  # [..., "...HttpCompressionMiddleware", "...MinifyHtmlMiddleware"]
         """
         ours = [*cls._HTML_MIDDLEWARE, *([cls._RELOAD_MIDDLEWARE] if debug else [])]
         return [*(m for m in middlewares if m not in ours), *ours]
 
     @classmethod
-    def home_url(cls) -> str:
-        """Return the `HOME_URL` prefix with a trailing slash, or `""` if unset."""
-        cls._USED_HOME_URL = True
-        url = str(getattr(settings, "HOME_URL", None) or "").strip("/")
-        return f"{url}/" if url else ""
+    def _application(cls, kind: str, *, dir: Path, project: bool) -> str:
+        """Return the `kind` ("asgi" or "wsgi") application path, creating `dir/<kind>.py` if missing.
+
+        Examples::
+
+            Conf._application("wsgi", dir=APP_DIR, project=False)  # "djangx.core.wsgi.application"
+            Conf._application("wsgi", dir=APP_DIR, project=True)  # "app.wsgi.application"
+        """
+        if not project:
+            return f"djangx.core.{kind}.application"
+
+        file = dir / f"{kind}.py"
+        text = cls._ENTRYPOINT.format(kind=kind)
+        if not file.exists():
+            dir.mkdir(parents=True, exist_ok=True)
+            file.write_text(text)
+        elif file.read_text() != text:  # never overwrite: the user may have edited it
+            warn(
+                f"{file} differs from djangX's template; leaving it as is.",
+                stacklevel=3,
+            )
+        return f"{dir.name}.{kind}.application"
 
     @classmethod
-    def home_url_was_used(cls) -> bool:
-        """Return whether `home_url()` has been called."""
-        return cls._USED_HOME_URL
+    def asgi_application(cls, *, dir: Path, project: bool = False) -> str:
+        """Return the `ASGI_APPLICATION` path: `dir/asgi.py` if `project`, else djangX's own.
+
+        Examples::
+
+            Conf.asgi_application(dir=APP_DIR)  # "djangx.core.asgi.application"
+            Conf.asgi_application(dir=APP_DIR, project=True)  # "app.asgi.application"
+        """
+        return cls._application("asgi", dir=dir, project=project)
 
     @classmethod
-    def _configured_url(cls, setting_name: str, default: str) -> str:
-        """Return a configured URL prefix (or `default`) with a trailing slash."""
-        url = str(getattr(settings, setting_name, None) or default).strip("/")
-        return f"{url}/"
+    def wsgi_application(cls, *, dir: Path, project: bool = False) -> str:
+        """Return the `WSGI_APPLICATION` path: `dir/wsgi.py` if `project`, else djangX's own.
 
-    @classmethod
-    def admin_url(cls) -> str:
-        """Return the admin URL prefix."""
-        return cls._configured_url("ADMIN_URL", "admin")
+        Examples::
 
-    @classmethod
-    def rest_auth_url(cls) -> str:
-        """Return the DRF login/logout URL prefix."""
-        return cls._configured_url("REST_AUTH_URL", "__api-auth__")
-
-    @classmethod
-    def reload_url(cls) -> str:
-        """Return the browser-reload URL prefix."""
-        return cls._configured_url("RELOAD_URL", "__reload__")
+            Conf.wsgi_application(dir=APP_DIR)  # "djangx.core.wsgi.application"
+            Conf.wsgi_application(dir=APP_DIR, project=True)  # "app.wsgi.application"
+        """
+        return cls._application("wsgi", dir=dir, project=project)
 
 
-DJANGO_SETTINGS_MODULE: str | None = Settings().module
+DJANGO_SETTINGS_MODULE: str | None = Conf().module

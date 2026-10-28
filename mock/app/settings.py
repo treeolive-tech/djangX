@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlparse
 
 from django.utils.csp import CSP
-from djangx.core.utils import Settings
+from djangx.core.utils import Conf
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
@@ -47,7 +47,7 @@ ALLOWED_HOSTS: list[str] = [
 
 # Application definition
 
-INSTALLED_APPS: list[str] = Settings.installed_apps(
+INSTALLED_APPS: list[str] = Conf.installed_apps(
     defaults=[
         "django.contrib.admin",
         "django.contrib.auth",
@@ -55,11 +55,11 @@ INSTALLED_APPS: list[str] = Settings.installed_apps(
         "django.contrib.sessions",
         "django.contrib.messages",
     ],
-    app_dir=APP_DIR,
+    dir=APP_DIR,
     debug=DEBUG,
 )
 
-MIDDLEWARE: list[str] = Settings.middleware(
+MIDDLEWARE: list[str] = Conf.middleware(
     middlewares=[
         "django.middleware.security.SecurityMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
@@ -73,13 +73,11 @@ MIDDLEWARE: list[str] = Settings.middleware(
     debug=DEBUG,
 )
 
-HOME_APP: str = "app.main"
+ASGI_APPLICATION: str = Conf.asgi_application(dir=APP_DIR, project=not DEBUG)
+
+WSGI_APPLICATION: str = Conf.wsgi_application(dir=APP_DIR, project=not DEBUG)
 
 ROOT_URLCONF: str = "djangx.core.urls"
-
-ASGI_APPLICATION: str = "manage.asgi"
-
-WSGI_APPLICATION: str = "manage.wsgi"
 
 
 # Templates & context

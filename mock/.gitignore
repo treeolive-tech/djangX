@@ -8,6 +8,10 @@
 # Static & media files
 /public/
 
+# Deploy files
+/app/asgi.py
+/app/wsgi.py
+
 # Cache
 /.ruff_cache/
 __pycache__/

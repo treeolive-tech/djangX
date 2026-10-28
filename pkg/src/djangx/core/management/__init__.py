@@ -3,13 +3,8 @@
 from sys import argv
 
 from ... import PKG_NAME, PKG_VERBOSE_NAME
-from ..utils import (
-    DJANGO_SETTINGS_MODULE,
-    HELP_COMMANDS,
-    SCRIPT_COMMANDS,
-    ExitCode,
-    print_version,
-)
+from ..utils import DJANGO_SETTINGS_MODULE, ExitCode, print_version
+from .commands import HELP_COMMANDS, SCRIPT_COMMANDS
 
 
 def _run_builtin() -> None:
