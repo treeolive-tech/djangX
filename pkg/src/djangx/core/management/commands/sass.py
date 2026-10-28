@@ -13,8 +13,8 @@ from ...apps import CoreConfig
 class Command(BaseCommand):
     help: str = "Manage Sass: --build compiles Bootstrap (chosen via SASS_INCLUDES) into custom.css."
 
-    SCSS_DIR: ClassVar[Path] = CoreConfig.dir / "resources" / "bootstrap" / "scss"
-    OUT: ClassVar[Path] = CoreConfig.dir / "static" / "bootstrap" / "css" / "custom.css"
+    SCSS_DIR: ClassVar[Path] = CoreConfig.res_dir / "bootstrap" / "scss"
+    OUT: ClassVar[Path] = CoreConfig.static_dir / "bootstrap" / "css" / "custom.css"
     STAMP: ClassVar[Path] = OUT.with_name(".settings-hash")
 
     # Settings whose change should trigger a recompile.

@@ -5,4 +5,6 @@ from .. import CORE_APP, CORE_DIR
 
 class CoreConfig(AppConfig):
     name = CORE_APP
-    dir = CORE_DIR
+    base_dir = CORE_DIR
+    static_dir = base_dir / "static"
+    res_dir = base_dir / "resources"
