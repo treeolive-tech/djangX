@@ -1,5 +1,6 @@
-# Cache
-__pycache__/
+# Environment
+/.venv/
+/.env*
 
 # SQLite database
 /db.sqlite3
@@ -7,6 +8,9 @@ __pycache__/
 # Static & media files
 /public/
 
-# Environment
-/.venv/
-/.env*
+# Cache
+/.ruff_cache/
+__pycache__/
+
+# Temporary or Rough work
+.tmp/

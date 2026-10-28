@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv_build>=0.13.5,<0.14.0"]
+requires = ["uv_build>=0.13.6,<0.14.0"]
 build-backend = "uv_build"
 
 [project.urls]
@@ -11,23 +11,34 @@ djx = "djangx.core.management:main"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev8"
+version = "0.1.0.dev11"
 description = ""
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
-requires-python = ">=3.14"
+maintainers = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Framework :: Django",
+    "Framework :: Django :: 6.1",
+    "Topic :: Internet :: WWW/HTTP",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+keywords = ["djangx", "django", "bootstrap", "sass"]
+requires-python = ">=3.14,<3.15"
 dependencies = [
     "django>=6.1.2",
+    "django-browser-reload>=1.21.0",
     "django-dart-sass",
+    "django-http-compression[brotli]>=1.4.0",
+    "django-minify-html>=1.14.0",             # requires python<3.15
+    "djangorestframework>=3.18.3",
     "pillow>=13.0.0",
     "python-dotenv>=1.2.4",
 ]
@@ -36,11 +47,11 @@ dependencies = [
 postgres = ["psycopg[binary,pool]>=3.3.6"]
 vercel = ["psycopg[binary,pool]>=3.3.6", "vercel>=0.12.1"]
 
-[tool.uv.sources]
-django-dart-sass = { git = "https://github.com/kvnwaks/django-dart-sass.git", branch = "djv6-support" }
-
 [[tool.uv.index]]
 name = "testpypi"
 url = "https://test.pypi.org/simple/"
 publish-url = "https://test.pypi.org/legacy/"
 explicit = true
+
+[tool.uv.sources]
+django-dart-sass = { git = "https://github.com/kvnwaks/django-dart-sass.git", branch = "djv6-support" }

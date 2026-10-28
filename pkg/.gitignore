@@ -1,2 +1,10 @@
+# Environment
+/.venv/
+/.env*
+
 # Cache
+/.ruff_cache/
 __pycache__/
+
+# Temporary or Rough work
+.tmp/

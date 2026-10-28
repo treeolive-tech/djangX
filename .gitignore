@@ -1,5 +1,11 @@
-/.ruff_cache/
+# Environment
 /.venv/
+
+# Cache
+/.ruff_cache/
+
+# Distribution
 /dist/
-/uv.lock
+
+# Temporary or Rough work
 .tmp/
