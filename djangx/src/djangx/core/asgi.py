@@ -11,8 +11,7 @@ from os import environ
 
 from django.core.asgi import get_asgi_application
 
-from .utils import DJANGO_SETTINGS_MODULE
+from .utils import settings_module
 
-assert DJANGO_SETTINGS_MODULE is not None
-environ.setdefault("DJANGO_SETTINGS_MODULE", DJANGO_SETTINGS_MODULE)
+environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module())
 application = get_asgi_application()

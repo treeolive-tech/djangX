@@ -2,7 +2,6 @@
 name = "djangX-app"
 version = "0.1.0"
 readme = "README.md"
-settings = "app.settings"
 authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
 requires-python = ">=3.14,<3.15"
 dependencies = ["djangx[vercel]>=0.1.0.dev14", "django-dart-sass"]

@@ -3,7 +3,7 @@
 from sys import argv
 
 from ... import PKG_NAME, PKG_VERBOSE_NAME
-from ..utils import DJANGO_SETTINGS_MODULE, ExitCode, print_version
+from ..utils import ExitCode, SettingsNotFound, print_version, settings_module
 from .commands import HELP_COMMANDS, SCRIPT_COMMANDS
 
 
@@ -29,33 +29,15 @@ def _run_builtin() -> None:
 
 def _run_project_or_help(command: str) -> None:
     """Run a command against the project's settings, or show help if none is found."""
-
-    if DJANGO_SETTINGS_MODULE:
-        from os import environ
-        from pathlib import Path
-        from sys import path
-
-        from django.core.management import execute_from_command_line
-        from dotenv import load_dotenv
-
-        base_dir = Path.cwd()
-        path.insert(0, str(base_dir))
-        environ.setdefault("DJANGO_SETTINGS_MODULE", DJANGO_SETTINGS_MODULE)
-        dotenv = base_dir / ".env.local"
-
-        if dotenv.is_file():
-            load_dotenv(dotenv)
-
-        execute_from_command_line(argv)
-    else:
+    try:
+        module = settings_module()
+    except SettingsNotFound:
         match argv[1]:
             case cmd if cmd in HELP_COMMANDS:
                 print(
-                    "No pyproject.toml found (or it's missing a [project] `settings` key).\n\n"
+                    "No app/settings.py found.\n\n"
                     "To see project-specific commands, run this from the root of a "
-                    f"{PKG_VERBOSE_NAME} project, or add to your pyproject.toml:\n\n"
-                    "    [project]\n"
-                    '    settings = "app.settings"'
+                    f"{PKG_VERBOSE_NAME} project (the folder that contains `app/settings.py`)."
                 )
 
             case _:
@@ -66,6 +48,23 @@ def _run_project_or_help(command: str) -> None:
 
         if command in HELP_COMMANDS:
             _run_builtin()
+    else:
+        from os import environ
+        from pathlib import Path
+        from sys import path
+
+        from django.core.management import execute_from_command_line
+        from dotenv import load_dotenv
+
+        base_dir = Path.cwd()
+        path.insert(0, str(base_dir))
+        environ.setdefault("DJANGO_SETTINGS_MODULE", module)
+        dotenv = base_dir / ".env.local"
+
+        if dotenv.is_file():
+            load_dotenv(dotenv)
+
+        execute_from_command_line(argv)
 
 
 def main() -> None:
