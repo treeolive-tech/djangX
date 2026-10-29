@@ -1,3 +1,3 @@
 # djangX
 
-See the [package README](pkg/README.md) for documentation.
+See the [package README](djangx/README.md) for documentation.
