@@ -5,6 +5,8 @@ from tomllib import load
 from typing import Any, ClassVar
 from warnings import warn
 
+from .files import write_file
+
 __all__: list[str] = ["DJANGO_SETTINGS_MODULE", "Conf"]
 
 
@@ -28,18 +30,6 @@ class Conf:
     _RELOAD_MIDDLEWARE: ClassVar[str] = (
         "django_browser_reload.middleware.BrowserReloadMiddleware"
     )
-
-    # Contents of the generated `asgi.py` / `wsgi.py`; `{kind}` is "asgi" or "wsgi".
-    _ENTRYPOINT: ClassVar[str] = """\
-from os import environ
-
-from django.core.{kind} import get_{kind}_application
-from djangx.core.utils import DJANGO_SETTINGS_MODULE
-
-assert DJANGO_SETTINGS_MODULE is not None
-environ.setdefault("DJANGO_SETTINGS_MODULE", DJANGO_SETTINGS_MODULE)
-application = get_{kind}_application()
-"""
 
     def __init__(self) -> None:
         """Load `pyproject.toml` from the working directory, or use empty data.
@@ -136,14 +126,9 @@ application = get_{kind}_application()
         if not project:
             return f"djangx.core.{kind}.application"
 
-        file = dir / f"{kind}.py"
-        text = cls._ENTRYPOINT.format(kind=kind)
-        if not file.exists():
-            dir.mkdir(parents=True, exist_ok=True)
-            file.write_text(text)
-        elif file.read_text() != text:  # never overwrite: the user may have edited it
+        if write_file(kind, dir) == "differs":
             warn(
-                f"{file} differs from djangX's template; leaving it as is.",
+                f"{dir / f'{kind}.py'} differs from djangX's template; leaving it as is.",
                 stacklevel=3,
             )
         return f"{dir.name}.{kind}.application"
