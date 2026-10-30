@@ -40,7 +40,10 @@ class Command(NonSystemCheckedCommand):
         try:
             from ...utils.copy import copy
 
-            copy(source=random_str)
+            if not copy(source=random_str, verbose=False):
+                from ...utils.exit import ExitCode
+
+                raise SystemExit(ExitCode.ERROR)
             cprint("✓ Copied to clipboard!", Style.SUCCESS)
         except Exception as e:  # noqa: BLE001  # non-fatal, string already shown
             cprint(f"Could not copy to clipboard: {e}", Style.WARNING)
