@@ -3,14 +3,14 @@ from pathlib import Path
 
 from ...utils.commands import NonSystemCheckedCommand
 from ...utils.console import Style, cprint
-from ...utils.exit import ExitCode
+from ...utils.enum import Exit, Verbosity
 
 
 class Command(NonSystemCheckedCommand):
     help = "Delete a file or folder from a directory."
 
     def add_arguments(self, parser) -> None:
-        """Register `--file` or `--folder` (exactly one), `--dir`, `--recursive` and `--verbose`."""
+        """Register the target, base directory and recursive-search options."""
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument(
             "--file",
@@ -34,11 +34,6 @@ class Command(NonSystemCheckedCommand):
             action="store_true",
             help="Recursively search subdirectories for the target.",
         )
-        parser.add_argument(
-            "--verbose",
-            action="store_true",
-            help="Print the path of each deleted file or folder.",
-        )
 
     def handle(self, *args, **options) -> None:
         """Delete the matching file or folder; exit with `ExitCode.ERROR` on failure.
@@ -46,21 +41,22 @@ class Command(NonSystemCheckedCommand):
         Examples::
 
             djx rm --file app.log --dir logs
-            djx rm --folder __pycache__ --recursive --verbose
+            djx rm --folder __pycache__ --recursive --verbosity 2
         """
         base_dir = Path(options["base_dir"]).resolve()
+        verbosity = Verbosity(options["verbosity"])
         if not base_dir.is_dir():
             cprint(f"Directory not found: {base_dir}", Style.ERROR)
-            raise SystemExit(ExitCode.ERROR)
+            raise SystemExit(Exit.ERROR)
 
         target = options["file_name"] or options["folder_name"]
         targets = self._resolve_targets(base_dir, target, options["recursive"])
 
         if options["file_name"]:
-            deleted = self._delete_files(targets, options["verbose"])
+            deleted = self._delete_files(targets, verbosity)
             target_kind = "file"
         else:
-            deleted = self._delete_folders(targets, options["verbose"])
+            deleted = self._delete_folders(targets, verbosity)
             target_kind = "folder"
 
         if deleted == 0:
@@ -69,9 +65,13 @@ class Command(NonSystemCheckedCommand):
                 f"No matching {target_kind} found for '{target}' in {base_dir}{suffix}.",
                 Style.WARNING,
             )
-            raise SystemExit(ExitCode.ERROR)
+            raise SystemExit(Exit.ERROR)
 
-        cprint(f"✓ Deleted {deleted} {target_kind}(s).", Style.SUCCESS)
+        cprint(
+            f"✓ Deleted {deleted} {target_kind}(s).",
+            Style.SUCCESS,
+            verbosity=verbosity,
+        )
 
     def _resolve_targets(
         self, base_dir: Path, target: str, recursive: bool
@@ -90,12 +90,12 @@ class Command(NonSystemCheckedCommand):
         candidate = (base_dir / target).resolve()
         return [candidate] if candidate.exists() else []
 
-    def _delete_files(self, paths: list[Path], verbose: bool) -> int:
+    def _delete_files(self, paths: list[Path], verbosity: Verbosity) -> int:
         """Unlink each file or symlink in `paths` and return how many were deleted.
 
         Examples::
 
-            self._delete_files([Path("a.log"), Path("b.log")], verbose=False)  # 2
+            self._delete_files([Path("a.log"), Path("b.log")], verbosity=Verbosity.NORMAL)  # 2
         """
         deleted = 0
         for path in paths:
@@ -103,24 +103,32 @@ class Command(NonSystemCheckedCommand):
                 path.is_file() or path.is_symlink()
             ):  # is_file() is False for dangling links
                 path.unlink()
-                if verbose:
-                    cprint(f"Deleted file: {path}", Style.INFO)
+                cprint(
+                    f"Deleted file: {path}",
+                    Style.INFO,
+                    verbosity=verbosity,
+                    min_verbosity=Verbosity.VERBOSE,
+                )
                 deleted += 1
         return deleted
 
-    def _delete_folders(self, paths: list[Path], verbose: bool) -> int:
+    def _delete_folders(self, paths: list[Path], verbosity: Verbosity) -> int:
         """Remove each folder in `paths`, deepest first, and return how many were deleted.
 
         Examples::
 
-            self._delete_folders([Path("a"), Path("a/b")], verbose=False)  # 2 ("a/b" goes first)
+            self._delete_folders([Path("a"), Path("a/b")], verbosity=Verbosity.NORMAL)  # 2 ("a/b" goes first)
         """
         deleted = 0
         # Deepest first, so a parent's rmtree doesn't remove a child still in the list.
         for path in sorted(paths, key=lambda p: len(p.parts), reverse=True):
             if path.is_dir() and not path.is_symlink():
                 shutil.rmtree(path)
-                if verbose:
-                    cprint(f"Deleted folder: {path}", Style.INFO)
+                cprint(
+                    f"Deleted folder: {path}",
+                    Style.INFO,
+                    verbosity=verbosity,
+                    min_verbosity=Verbosity.VERBOSE,
+                )
                 deleted += 1
         return deleted

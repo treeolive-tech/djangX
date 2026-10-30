@@ -20,6 +20,7 @@ Copy text to the clipboard (omit destination)::
 
 from ...utils.commands import NonSystemCheckedCommand
 from ...utils.copy import copy
+from ...utils.enum import Verbosity
 
 
 class Command(NonSystemCheckedCommand):
@@ -58,9 +59,13 @@ class Command(NonSystemCheckedCommand):
         source: str = options["source"]
         destination: str | None = options["destination"]
 
-        success: bool = copy(source, destination)
+        success: bool = copy(
+            source,
+            destination,
+            verbosity=Verbosity(options["verbosity"]),
+        )
 
         if not success:
-            from ...utils.exit import ExitCode
+            from ...utils.enum import Exit
 
-            raise SystemExit(ExitCode.ERROR)
+            raise SystemExit(Exit.ERROR)

@@ -56,7 +56,7 @@ def _run_project_or_help(command: str) -> None:
                 )
 
             case _:
-                from ..utils.exit import ExitCode
+                from ..utils.enum import Exit
 
                 cprint(
                     [
@@ -67,7 +67,7 @@ def _run_project_or_help(command: str) -> None:
                         (" for usage.", ""),
                     ]
                 )
-                raise SystemExit(ExitCode.ERROR)
+                raise SystemExit(Exit.ERROR)
 
         if command in HELP_COMMANDS:
             _run_builtin(scripts_only=True)

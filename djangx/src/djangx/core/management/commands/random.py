@@ -1,5 +1,6 @@
 from ...utils.commands import NonSystemCheckedCommand
 from ...utils.console import Style, cprint
+from ...utils.enum import Verbosity
 from ...utils.string import random_string
 
 
@@ -40,10 +41,14 @@ class Command(NonSystemCheckedCommand):
         try:
             from ...utils.copy import copy
 
-            if not copy(source=random_str, verbose=False):
-                from ...utils.exit import ExitCode
+            if not copy(source=random_str, verbosity=Verbosity.QUIET):
+                from ...utils.enum import Exit
 
-                raise SystemExit(ExitCode.ERROR)
-            cprint("✓ Copied to clipboard!", Style.SUCCESS)
+                raise SystemExit(Exit.ERROR)
+            cprint(
+                "✓ Copied to clipboard!",
+                Style.SUCCESS,
+                verbosity=Verbosity(options["verbosity"]),
+            )
         except Exception as e:  # noqa: BLE001  # non-fatal, string already shown
             cprint(f"Could not copy to clipboard: {e}", Style.WARNING)

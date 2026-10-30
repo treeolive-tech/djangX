@@ -10,6 +10,8 @@ from django.test import override_settings
 
 from ...apps import CoreConfig
 from ...utils.commands import NonSystemCheckedCommand
+from ...utils.console import Style, cprint
+from ...utils.enum import Verbosity
 
 
 class Command(StartProjectCommand, NonSystemCheckedCommand):
@@ -33,10 +35,19 @@ class Command(StartProjectCommand, NonSystemCheckedCommand):
         options["vercel"] = platform == "vercel"
         super().handle(**options)
         with override_settings(APP_DIR=target / "app"):
-            call_command("startapp", "main", verbosity=0)
+            call_command("startapp", "main", verbosity=Verbosity.QUIET)
         if platform == "vercel":
             with override_settings(BASE_DIR=target):
-                call_command("createdeploy")
+                call_command("createdeploy", verbosity=Verbosity.QUIET)
+        cprint(
+            [
+                ("✓ Created project ", Style.SUCCESS),
+                (options["name"], Style.HIGHLIGHT),
+                (" in ", Style.SUCCESS),
+                (str(target), Style.HIGHLIGHT),
+            ],
+            verbosity=Verbosity(options["verbosity"]),
+        )
 
     def add_arguments(self, parser: ArgumentParser) -> None:
         super().add_arguments(parser)

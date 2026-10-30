@@ -1,9 +1,9 @@
 from enum import IntEnum
 
-__all__: list[str] = ["ExitCode"]
+__all__: list[str] = ["Exit", "Verbosity"]
 
 
-class ExitCode(IntEnum):
+class Exit(IntEnum):
     """Standard process exit codes following Unix conventions.
 
     Examples::
@@ -12,5 +12,14 @@ class ExitCode(IntEnum):
         raise SystemExit(ExitCode.SUCCESS) # exits with code 0
     """
 
-    SUCCESS = 0  # Command completed without errors.
-    ERROR = 1  # Command encountered an error.
+    SUCCESS = 0
+    ERROR = 1
+
+
+class Verbosity(IntEnum):
+    """Django management command output levels."""
+
+    QUIET = 0
+    NORMAL = 1
+    VERBOSE = 2
+    VERY_VERBOSE = 3

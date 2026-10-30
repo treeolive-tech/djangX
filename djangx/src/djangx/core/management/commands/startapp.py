@@ -8,6 +8,7 @@ from django.core.management.base import CommandError
 from django.core.management.commands.startapp import Command as StartAppCommand
 
 from ...utils.console import Style, cprint
+from ...utils.enum import Verbosity
 
 
 class Command(StartAppCommand):
@@ -46,12 +47,12 @@ class Command(StartAppCommand):
                 flags=re.MULTILINE,
             )
         )
-        if options["verbosity"] > 0:
-            cprint(
-                [
-                    ("Created ", Style.SUCCESS),
-                    (f"{prefix}.{options['name']}", Style.HIGHLIGHT),
-                    (" in ", Style.SUCCESS),
-                    (str(target), Style.HIGHLIGHT),
-                ]
-            )
+        cprint(
+            [
+                ("Created ", Style.SUCCESS),
+                (f"{prefix}.{options['name']}", Style.HIGHLIGHT),
+                (" in ", Style.SUCCESS),
+                (str(target), Style.HIGHLIGHT),
+            ],
+            verbosity=Verbosity(options["verbosity"]),
+        )

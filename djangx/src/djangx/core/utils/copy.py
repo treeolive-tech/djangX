@@ -6,6 +6,7 @@ from shutil import copy2, copytree, rmtree
 from typing import TypeAlias
 
 from .console import Style, cprint
+from .enum import Verbosity
 
 __all__: list[str] = ["copy"]
 
@@ -13,7 +14,9 @@ _PathLike: TypeAlias = str | Path
 
 
 def copy(
-    source: _PathLike, destination: _PathLike | None = None, verbose: bool = True
+    source: _PathLike,
+    destination: _PathLike | None = None,
+    verbosity: Verbosity = Verbosity.NORMAL,
 ) -> bool:
     """Copy a file or directory to `destination`, or text to the clipboard if it is omitted.
 
@@ -24,11 +27,11 @@ def copy(
 
         copy("hello world")  # True (text copied to clipboard)
         copy("/tmp/file.txt", "/backup/file.txt")  # True
-        copy("/tmp/mydir", "/backup/mydir", verbose=False)  # True, no success message
+        copy("/tmp/mydir", "/backup/mydir", verbosity=Verbosity.QUIET)  # True, no success message
         copy("/missing", "/backup/x")  # False
     """
     if destination is None:
-        return _clipboard_copy(str(source), verbose=verbose)
+        return _clipboard_copy(str(source), verbosity=verbosity)
 
     src = _resolve_path(source)
     dst = _resolve_path(destination)
@@ -65,15 +68,15 @@ def copy(
         cprint(f"Failed to copy {kind}: {type(e).__name__}: {e}", Style.ERROR)
         return False
 
-    if verbose:
-        cprint(
-            [
-                (f"✓ {kind.capitalize()} copied successfully from ", Style.SUCCESS),
-                (str(src), Style.HIGHLIGHT),
-                (" to ", Style.SUCCESS),
-                (str(dst), Style.HIGHLIGHT),
-            ]
-        )
+    cprint(
+        [
+            (f"✓ {kind.capitalize()} copied successfully from ", Style.SUCCESS),
+            (str(src), Style.HIGHLIGHT),
+            (" to ", Style.SUCCESS),
+            (str(dst), Style.HIGHLIGHT),
+        ],
+        verbosity=verbosity,
+    )
     return True
 
 
@@ -93,7 +96,7 @@ def _prompt_overwrite(destination: Path) -> bool:
     return input("Overwrite? [y/N]: ").strip().lower() == "y"
 
 
-def _clipboard_copy(text: str, verbose: bool = True) -> bool:
+def _clipboard_copy(text: str, verbosity: Verbosity = Verbosity.NORMAL) -> bool:
     """Copy `text` to the clipboard with ``pyperclip`` (Linux also needs ``xclip`` or ``xsel``).
 
     Examples::
@@ -111,6 +114,8 @@ def _clipboard_copy(text: str, verbose: bool = True) -> bool:
         cprint(f"Failed to copy to clipboard: {type(e).__name__}: {e}", Style.ERROR)
         return False
 
-    if verbose:
-        cprint([("✓ Copied to clipboard: ", Style.SUCCESS), (text, Style.HIGHLIGHT)])
+    cprint(
+        [("✓ Copied to clipboard: ", Style.SUCCESS), (text, Style.HIGHLIGHT)],
+        verbosity=verbosity,
+    )
     return True

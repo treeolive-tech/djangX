@@ -6,6 +6,8 @@ from rich.console import Console
 from rich.text import Text
 from rich.theme import Theme
 
+from .enum import Verbosity
+
 __all__: list[str] = ["THEME", "Style", "console", "cprint"]
 
 
@@ -39,7 +41,14 @@ THEME = Theme(
 console = Console(theme=THEME)
 
 
-def cprint(text: str | list[tuple[str, str]], style: str = "", end: str = "\n") -> None:
+def cprint(
+    text: str | list[tuple[str, str]],
+    style: str = "",
+    end: str = "\n",
+    *,
+    verbosity: Verbosity = Verbosity.NORMAL,
+    min_verbosity: Verbosity = Verbosity.NORMAL,
+) -> None:
     """Print text, or ``(segment, style)`` pairs, in rich styles.
 
     Use ``""`` as the style for an unstyled segment.
@@ -49,5 +58,8 @@ def cprint(text: str | list[tuple[str, str]], style: str = "", end: str = "\n") 
         cprint("Build failed", Style.ERROR)
         cprint([("Copied ", Style.SUCCESS), ("a.txt", Style.HIGHLIGHT)])
     """
+    if verbosity < min_verbosity:
+        return
+
     segments = [(text, style)] if isinstance(text, str) else text
     console.print(Text.assemble(*segments), end=end)

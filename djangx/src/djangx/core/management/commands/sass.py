@@ -9,6 +9,7 @@ from django_dart_sass.registry import compile_string
 
 from ...apps import CoreConfig
 from ...utils.console import Style, cprint
+from ...utils.enum import Verbosity
 
 
 class Command(BaseCommand):
@@ -53,9 +54,17 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         if not options["build"]:
             raise CommandError("Nothing to do. Pass --build (-b).")
-        self.build(if_changed=options["if_changed"])
+        self.build(
+            if_changed=options["if_changed"],
+            verbosity=Verbosity(options["verbosity"]),
+        )
 
-    def build(self, *, if_changed: bool = False) -> None:
+    def build(
+        self,
+        *,
+        if_changed: bool = False,
+        verbosity: Verbosity = Verbosity.NORMAL,
+    ) -> None:
         """Compile SCSS into `OUT`, optionally skipping when settings are unchanged.
 
         Examples::
@@ -85,7 +94,8 @@ class Command(BaseCommand):
             [
                 ("Compiled SCSS to ", Style.SUCCESS),
                 (str(self.OUT), Style.HIGHLIGHT),
-            ]
+            ],
+            verbosity=verbosity,
         )
 
     def build_source(

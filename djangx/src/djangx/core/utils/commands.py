@@ -10,6 +10,7 @@ from django.core.management.base import BaseCommand, CommandParser
 
 from ..apps import CoreConfig
 from .console import Style, cprint
+from .enum import Verbosity
 
 __all__: list[str] = [
     "HELP_COMMANDS",
@@ -113,19 +114,25 @@ class FileCommand(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         """Remove the file, or create it unless an existing file is preserved."""
         file = self.target_dir(options) / self.filename
+        verbosity = Verbosity(options["verbosity"])
 
         if options["remove"]:
             if self._remove(file):
-                cprint(f"Removed {file}", Style.SUCCESS)
+                cprint(
+                    f"Removed {file}",
+                    Style.SUCCESS,
+                    verbosity=verbosity,
+                )
             else:
                 cprint(f"{file} does not exist.", Style.WARNING)
             return
 
-        match self._write(file, self.content(), overwrite=options["overwrite"]):
+        result = self._write(file, self.content(), overwrite=options["overwrite"])
+        match result:
             case "wrote":
-                cprint(f"Wrote {file}", Style.SUCCESS)
+                cprint(f"Wrote {file}", Style.SUCCESS, verbosity=verbosity)
             case "same":
-                cprint(f"{file} is already up to date.")
+                cprint(f"{file} is already up to date.", verbosity=verbosity)
             case "differs":
                 cprint(
                     f"{file} differs from the template; use --overwrite to replace it.",
@@ -211,6 +218,7 @@ class ServerFileCommand(FileCommand):
             raise CommandError("--reset can only be used with --remove.")
 
         super().handle(*args, **options)
+        verbosity = Verbosity(options["verbosity"])
 
         if options["set"]:
             value = f"{self.target_dir(options).name}.{self.kind}.application"
@@ -220,9 +228,13 @@ class ServerFileCommand(FileCommand):
             return
 
         if self._set_setting(self.setting, value):
-            cprint(f"Set {self.setting} to {value}", Style.SUCCESS)
+            cprint(
+                f"Set {self.setting} to {value}",
+                Style.SUCCESS,
+                verbosity=verbosity,
+            )
         else:
-            cprint(f"{self.setting} is already {value}.")
+            cprint(f"{self.setting} is already {value}.", verbosity=verbosity)
 
 
 def _is_script(file: Path) -> bool:

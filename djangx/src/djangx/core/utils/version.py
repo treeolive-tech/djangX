@@ -3,7 +3,7 @@
 from typing import Literal, NamedTuple, final
 
 from .console import Style, cprint
-from .exit import ExitCode
+from .enum import Exit
 
 __all__: list[str] = ["Version", "VersionResult", "print_version"]
 
@@ -70,7 +70,7 @@ class Version:
             )
 
 
-def print_version(package: str) -> ExitCode:
+def print_version(package: str) -> Exit:
     """Print the installed version of *package* and return an exit code.
 
     Examples::
@@ -88,7 +88,7 @@ def print_version(package: str) -> ExitCode:
                 (f".\n{result.error}", Style.ERROR),
             ]
         )
-        return ExitCode.ERROR
+        return Exit.ERROR
     else:
         cprint(result.output, Style.SUCCESS)
-        return ExitCode.SUCCESS
+        return Exit.SUCCESS
