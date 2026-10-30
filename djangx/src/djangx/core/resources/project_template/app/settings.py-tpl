@@ -33,7 +33,7 @@ SECRET_KEY: str = "{{ secret_key }}"
 
 ALLOWED_HOSTS: list[str] = [
     host.strip()
-    for host in getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,.vercel.app").split(",")
+    for host in getenv("ALLOWED_HOSTS", "localhost,127.0.0.1{% if vercel %},.vercel.app{% endif %}").split(",")
     if host.strip()
 ]
 
@@ -66,9 +66,9 @@ MIDDLEWARE: list[str] = Conf.middleware(
     debug=DEBUG,
 )
 
-ASGI_APPLICATION: str = "djangx.core.asgi.application"
+ASGI_APPLICATION: str = "djangx.core.management.asgi.application"
 
-WSGI_APPLICATION: str = "djangx.core.wsgi.application"
+WSGI_APPLICATION: str = "djangx.core.management.wsgi.application"
 
 ROOT_URLCONF: str = "djangx.core.urls"
 

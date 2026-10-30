@@ -4,6 +4,5 @@ from .console import *
 from .copy import *
 from .exit import *
 from .platform import *
-from .resolver import *
 from .string import *
 from .version import *
