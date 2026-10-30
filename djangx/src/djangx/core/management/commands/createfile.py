@@ -1,8 +1,9 @@
+import re
 from pathlib import Path
 from typing import Any, Literal
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandParser
+from django.core.management.base import BaseCommand, CommandError, CommandParser
 
 Result = Literal["wrote", "same", "differs"]
 
@@ -51,27 +52,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.0.1
 
-      - name: Generate manage.py, asgi.py and wsgi.py
-        run: uv run djx createfile manage asgi wsgi --overwrite
-
-      - name: Point settings at the generated files
-        run: |
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-
-          settings_file = Path("app/settings.py")
-          text = settings_file.read_text()
-          for name in ("ASGI", "WSGI"):
-              text, count = re.subn(
-                  rf"^{name}_APPLICATION[ :=].*$",
-                  f'{name}_APPLICATION: str = "app.{name.lower()}.application"',
-                  text,
-                  flags=re.MULTILINE,
-              )
-              assert count == 1, f"expected one {name}_APPLICATION line in {settings_file}"
-          settings_file.write_text(text)
-          PY
+      - name: Generate manage.py, asgi.py and wsgi.py, and point settings at them
+        run: uv run djx createfile manage asgi wsgi --overwrite --set-asgi --set-wsgi
 
       - name: Push to the deploy branch
         run: |
@@ -131,14 +113,38 @@ class Command(BaseCommand):
         file.write_text(text)
         return "wrote"
 
+    @staticmethod
+    def _set_setting(name: str, value: str) -> bool:
+        """Point `name` in `APP_DIR/settings.py` at `value`; return whether the file changed.
+
+        Examples::
+
+            Command._set_setting("WSGI_APPLICATION", "app.wsgi.application")  # True
+            Command._set_setting("WSGI_APPLICATION", "app.wsgi.application")  # False (already set)
+        """
+        file = settings.APP_DIR / "settings.py"
+        text = file.read_text()
+        new, count = re.subn(
+            rf"^{name}[ :=].*$",
+            f'{name}: str = "{value}"',
+            text,
+            flags=re.MULTILINE,
+        )
+        if count != 1:
+            raise CommandError(f"Expected one {name} line in {file}, found {count}.")
+        if new == text:
+            return False
+        file.write_text(new)
+        return True
+
     def add_arguments(self, parser: CommandParser) -> None:
-        """Add `kinds`, `--dir` and `--overwrite`.
+        """Add `kinds`, `--dir`, `--overwrite`, `--set-asgi` and `--set-wsgi`.
 
         Examples::
 
             djx createfile manage asgi wsgi
             djx createfile deploy --overwrite
-            djx createfile asgi --dir app
+            djx createfile asgi wsgi --set-asgi --set-wsgi
         """
         parser.add_argument(
             "kinds", nargs="+", choices=list(FILES), help="Which files to write."
@@ -150,6 +156,14 @@ class Command(BaseCommand):
         parser.add_argument(
             "--overwrite", action="store_true", help="Replace files that already exist."
         )
+        parser.add_argument(
+            "--set-asgi", action="store_true",
+            help="With `asgi`: point ASGI_APPLICATION in settings at the written file.",
+        )  # fmt: skip
+        parser.add_argument(
+            "--set-wsgi", action="store_true",
+            help="With `wsgi`: point WSGI_APPLICATION in settings at the written file.",
+        )  # fmt: skip
 
     def handle(
         self,
@@ -157,14 +171,22 @@ class Command(BaseCommand):
         kinds: list[str],
         dir: Path | None,
         overwrite: bool,
+        set_asgi: bool,
+        set_wsgi: bool,
         **options: Any,
     ) -> None:
-        """Write each kind and report whether it was written, unchanged or edited.
+        """Write each kind, then update the requested settings entries.
 
         Examples::
 
-            djx createfile manage asgi  # "Wrote .../manage.py", "Wrote .../app/asgi.py"
+            djx createfile asgi --set-asgi  # "Wrote .../app/asgi.py", "Set ASGI_APPLICATION to app.asgi.application"
+            djx createfile wsgi --set-asgi  # CommandError: --set-asgi needs the `asgi` kind.
         """
+        flags = {"asgi": set_asgi, "wsgi": set_wsgi}
+        for kind, wanted in flags.items():
+            if wanted and kind not in kinds:
+                raise CommandError(f"--set-{kind} needs the `{kind}` kind.")
+
         for kind in kinds:
             parent = dir or self._default_dir(kind)
             file = parent / FILES[kind][0]
@@ -179,3 +201,11 @@ class Command(BaseCommand):
                             f"{file} differs from the template; use --overwrite to replace it."
                         )
                     )
+
+            if flags.get(kind):
+                name = f"{kind.upper()}_APPLICATION"
+                value = f"{parent.name}.{kind}.application"
+                if self._set_setting(name, value):
+                    self.stdout.write(self.style.SUCCESS(f"Set {name} to {value}"))
+                else:
+                    self.stdout.write(f"{name} is already {value}.")
