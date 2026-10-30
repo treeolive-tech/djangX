@@ -11,7 +11,7 @@ from os import environ
 
 from django.core.asgi import get_asgi_application
 
-from .utils import settings_module
+from .utils.conf import settings_module
 
 environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module())
 application = get_asgi_application()

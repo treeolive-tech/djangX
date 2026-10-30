@@ -6,6 +6,8 @@ from django.conf import settings
 from django.urls import include, path
 from django.urls.resolvers import URLPattern, URLResolver
 
+from .utils.string import normalize_url_path
+
 _used_home_url: bool = False
 
 
@@ -17,8 +19,8 @@ def _url_prefix(setting_name: str, default: str = "") -> str:
         _url_prefix("ADMIN_URL", "admin")  # "admin/"
         _url_prefix("HOME_URL")  # ""
     """
-    url = str(getattr(settings, setting_name, None) or default).strip("/")
-    return f"{url}/" if url else ""
+    url = normalize_url_path(str(getattr(settings, setting_name, None) or default))
+    return "" if url == "/" else url
 
 
 def home_url() -> str:

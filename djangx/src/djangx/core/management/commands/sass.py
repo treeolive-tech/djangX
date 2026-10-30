@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django_dart_sass.registry import compile_string
 
 from ...apps import CoreConfig
+from ...utils.console import Style, cprint
 
 
 class Command(BaseCommand):
@@ -80,7 +81,12 @@ class Command(BaseCommand):
         self.OUT.parent.mkdir(parents=True, exist_ok=True)
         self.OUT.write_text(data=result["css"], encoding="utf-8")
         self.STAMP.write_text(fingerprint)
-        self.stdout.write(self.style.SUCCESS(f"Compiled SCSS to {self.OUT}"))
+        cprint(
+            [
+                ("Compiled SCSS to ", Style.SUCCESS),
+                (str(self.OUT), Style.HIGHLIGHT),
+            ]
+        )
 
     def build_source(
         self, includes: list[str] | None, custom_code: str | None = None

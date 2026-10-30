@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlparse
 
 from django.utils.csp import CSP
-from djangx.core.utils import Conf
+from djangx.core.utils.conf import Conf
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent

@@ -5,6 +5,8 @@ from typing import Any, Literal
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
+from ...utils.console import Style, cprint
+
 Result = Literal["wrote", "same", "differs"]
 
 MANAGE_PY: str = '''\
@@ -12,7 +14,7 @@ MANAGE_PY: str = '''\
 
 from os import environ
 
-from djangx.core.utils import settings_module
+from djangx.core.utils.conf import settings_module
 
 environ.setdefault(key="DJANGO_SETTINGS_MODULE", value=settings_module())
 
@@ -28,13 +30,13 @@ ENTRYPOINT: str = """\
 from os import environ
 
 from django.core.{kind} import get_{kind}_application
-from djangx.core.utils import settings_module
+from djangx.core.utils.conf import settings_module
 
 environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module())
 application = get_{kind}_application()
 """
 
-DEPLOY_YML: str = '''\
+DEPLOY_YML: str = """\
 name: Build deploy branch
 
 on:
@@ -50,7 +52,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: false
 
       - name: Generate manage.py, asgi.py and wsgi.py, and point settings at them
         run: uv run djx createfile manage asgi wsgi --overwrite --set-asgi --set-wsgi
@@ -63,7 +67,7 @@ jobs:
           git add -f manage.py app/asgi.py app/wsgi.py app/settings.py
           git commit --allow-empty -m "Deploy build of ${GITHUB_SHA::7}"
           git push --force origin deploy
-'''
+"""
 
 FILES: dict[str, tuple[str, str]] = {
     "manage": ("manage.py", MANAGE_PY),
@@ -192,20 +196,19 @@ class Command(BaseCommand):
             file = parent / FILES[kind][0]
             match self._write(kind, parent, overwrite=overwrite):
                 case "wrote":
-                    self.stdout.write(self.style.SUCCESS(f"Wrote {file}"))
+                    cprint(f"Wrote {file}", Style.SUCCESS)
                 case "same":
-                    self.stdout.write(f"{file} is already up to date.")
+                    cprint(f"{file} is already up to date.")
                 case "differs":
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"{file} differs from the template; use --overwrite to replace it."
-                        )
+                    cprint(
+                        f"{file} differs from the template; use --overwrite to replace it.",
+                        Style.WARNING,
                     )
 
             if flags.get(kind):
                 name = f"{kind.upper()}_APPLICATION"
                 value = f"{parent.name}.{kind}.application"
                 if self._set_setting(name, value):
-                    self.stdout.write(self.style.SUCCESS(f"Set {name} to {value}"))
+                    cprint(f"Set {name} to {value}", Style.SUCCESS)
                 else:
-                    self.stdout.write(f"{name} is already {value}.")
+                    cprint(f"{name} is already {value}.")

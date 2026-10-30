@@ -2,7 +2,7 @@
 
 from typing import Literal, NamedTuple, final
 
-from .enum import ExitCode
+from .exit import ExitCode
 
 __all__: list[str] = ["Version", "VersionResult", "print_version"]
 

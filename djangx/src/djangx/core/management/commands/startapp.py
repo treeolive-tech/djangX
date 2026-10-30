@@ -7,6 +7,8 @@ from django.conf import settings
 from django.core.management.base import CommandError
 from django.core.management.commands.startapp import Command as StartAppCommand
 
+from ...utils.console import Style, cprint
+
 
 class Command(StartAppCommand):
     help = "Create an app in `APP_DIR` with its AppConfig `name` set to `<APP_DIR name>.<app name>`."
@@ -44,6 +46,11 @@ class Command(StartAppCommand):
                 flags=re.MULTILINE,
             )
         )
-        self.stdout.write(
-            self.style.SUCCESS(f"Created {prefix}.{options['name']} in {target}")
+        cprint(
+            [
+                ("Created ", Style.SUCCESS),
+                (f"{prefix}.{options['name']}", Style.HIGHLIGHT),
+                (" in ", Style.SUCCESS),
+                (str(target), Style.HIGHLIGHT),
+            ]
         )
