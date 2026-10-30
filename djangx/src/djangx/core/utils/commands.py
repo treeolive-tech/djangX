@@ -142,7 +142,7 @@ class ServerFileCommand(FileCommand):
     Examples::
 
         djx createasgi --set  # write app/asgi.py, set ASGI_APPLICATION to app.asgi.application
-        djx createasgi --remove --reset  # delete it, set ASGI_APPLICATION to djangx.core.asgi.application
+        djx createasgi --remove --reset  # delete it, set ASGI_APPLICATION to djangx.core.management.asgi.application
         djx createwsgi --set
     """
 
@@ -215,7 +215,7 @@ class ServerFileCommand(FileCommand):
         if options["set"]:
             value = f"{self.target_dir(options).name}.{self.kind}.application"
         elif options["reset"]:
-            value = f"djangx.core.{self.kind}.application"
+            value = f"djangx.core.management.{self.kind}.application"
         else:
             return
 

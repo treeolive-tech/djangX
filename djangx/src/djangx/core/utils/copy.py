@@ -1,5 +1,6 @@
 """Copy a file, a directory or plain text (to the clipboard)."""
 
+from os.path import expandvars
 from pathlib import Path
 from shutil import copy2, copytree, rmtree
 from typing import TypeAlias
@@ -29,10 +30,8 @@ def copy(
     if destination is None:
         return _clipboard_copy(str(source), verbose=verbose)
 
-    from .resolver import to_path
-
-    src = to_path(source)
-    dst = to_path(destination)
+    src = _resolve_path(source)
+    dst = _resolve_path(destination)
 
     if src.is_file():
         kind = "file"
@@ -76,6 +75,11 @@ def copy(
             ]
         )
     return True
+
+
+def _resolve_path(value: _PathLike) -> Path:
+    """Expand environment variables and ``~``, then resolve a filesystem path."""
+    return Path(expandvars(str(value))).expanduser().resolve()
 
 
 def _prompt_overwrite(destination: Path) -> bool:

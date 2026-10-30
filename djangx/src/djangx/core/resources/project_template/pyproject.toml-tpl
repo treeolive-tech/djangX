@@ -3,10 +3,12 @@ name = "{{ project_name }}"
 version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
-dependencies = ["djangx[vercel]>=0.1.0.dev16", "django-dart-sass"]
+dependencies = ["djangx{% if vercel %}[vercel]{% endif %}>=0.1.0.dev16", "django-dart-sass"]
 
+{% if vercel %}
 [tool.vercel.scripts]
 build = "npm i -g sass-embedded && djx sass --build && djx makemigrations && djx migrate"
+{% endif %}
 
 [tool.uv.sources]
 django-dart-sass = { git = "https://github.com/kvnwaks/django-dart-sass.git", branch = "djv6-support" }

@@ -73,9 +73,9 @@ MIDDLEWARE: list[str] = Conf.middleware(
     debug=DEBUG,
 )
 
-ASGI_APPLICATION: str = "djangx.core.asgi.application"
+ASGI_APPLICATION: str = "djangx.core.management.asgi.application"
 
-WSGI_APPLICATION: str = "djangx.core.wsgi.application"
+WSGI_APPLICATION: str = "djangx.core.management.wsgi.application"
 
 ROOT_URLCONF: str = "djangx.core.urls"
 

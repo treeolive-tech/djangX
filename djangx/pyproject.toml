@@ -6,12 +6,12 @@ build-backend = "uv_build"
 repository = "https://github.com/treeolive-tech/djangX.git"
 
 [project.scripts]
-djangx = "djangx.core.management:main"
-djx = "djangx.core.management:main"
+djangx = "djangx.core.management.cli:main"
+djx = "djangx.core.management.cli:main"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev16"
+version = "0.1.0.dev17"
 description = ""
 readme = "README.md"
 license = "MIT"
