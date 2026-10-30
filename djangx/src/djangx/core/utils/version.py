@@ -2,6 +2,7 @@
 
 from typing import Literal, NamedTuple, final
 
+from .console import Style, cprint
 from .exit import ExitCode
 
 __all__: list[str] = ["Version", "VersionResult", "print_version"]
@@ -80,8 +81,14 @@ def print_version(package: str) -> ExitCode:
     result: VersionResult = Version.get(package)
 
     if result.error:
-        print(f"Could not determine version for package '{package}'.\n{result.error}")
+        cprint(
+            [
+                ("Could not determine version for package ", Style.ERROR),
+                (f"'{package}'", Style.HIGHLIGHT),
+                (f".\n{result.error}", Style.ERROR),
+            ]
+        )
         return ExitCode.ERROR
     else:
-        print(result.output)
+        cprint(result.output, Style.SUCCESS)
         return ExitCode.SUCCESS

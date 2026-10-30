@@ -4,7 +4,7 @@ version = "0.1.0"
 readme = "README.md"
 authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
 requires-python = ">=3.14,<3.15"
-dependencies = ["djangx[vercel]>=0.1.0.dev14", "django-dart-sass"]
+dependencies = ["djangx[vercel]>=0.1.0.dev15", "django-dart-sass"]
 
 [tool.vercel.scripts]
 build = "npm i -g sass-embedded && djx sass --build && djx makemigrations && djx migrate"

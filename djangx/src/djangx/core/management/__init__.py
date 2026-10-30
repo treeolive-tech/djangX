@@ -4,6 +4,7 @@ from sys import argv
 
 from ... import PKG_NAME, PKG_VERBOSE_NAME
 from ..utils.commands import HELP_COMMANDS, PROJECT_COMMANDS, SCRIPT_COMMANDS
+from ..utils.console import Style, cprint
 
 
 def _run_builtin(*, scripts_only: bool = False) -> None:
@@ -42,17 +43,29 @@ def _run_project_or_help(command: str) -> None:
     except SettingsNotFound:
         match argv[1]:
             case cmd if cmd in HELP_COMMANDS:
-                print(
-                    "No app/settings.py found.\n\n"
-                    "To see project-specific commands, run this from the root of a "
-                    f"{PKG_VERBOSE_NAME} project (the folder that contains `app/settings.py`)."
+                cprint(
+                    [
+                        ("No app/settings.py found.", Style.WARNING),
+                        (
+                            "\n\nTo see project-specific commands, run this from the root of a ",
+                            "",
+                        ),
+                        (PKG_VERBOSE_NAME, Style.HIGHLIGHT),
+                        (" project (the folder that contains `app/settings.py`).", ""),
+                    ]
                 )
 
             case _:
                 from ..utils.exit import ExitCode
 
-                print(
-                    f"Unknown command: '{argv[1]}'\nType '{PKG_NAME} help' for usage."
+                cprint(
+                    [
+                        ("Unknown command: ", Style.ERROR),
+                        (f"'{argv[1]}'", Style.HIGHLIGHT),
+                        ("\nType ", ""),
+                        (f"'{PKG_NAME} help'", Style.HIGHLIGHT),
+                        (" for usage.", ""),
+                    ]
                 )
                 raise SystemExit(ExitCode.ERROR)
 
@@ -83,8 +96,9 @@ def main() -> None:
 
     match command:
         case None:
-            print(
-                "...but the people who know their God shall be strong and do exploits. — Daniel 11:32"
+            cprint(
+                "...but the people who know their God shall be strong and do exploits. — Daniel 11:32",
+                Style.INFO,
             )
 
         case "-v" | "--version" | "version":
