@@ -1,0 +1,16 @@
+# Environment
+/.venv/
+/.env*
+
+# SQLite database
+/db.sqlite3
+
+# Static & media files
+/public/
+
+# Cache
+/.ruff_cache/
+__pycache__/
+
+# Temporary or Rough work
+.tmp/

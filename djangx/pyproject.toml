@@ -11,7 +11,7 @@ djx = "djangx.core.management:main"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev15"
+version = "0.1.0.dev16"
 description = ""
 readme = "README.md"
 license = "MIT"

@@ -46,11 +46,12 @@ class Command(StartAppCommand):
                 flags=re.MULTILINE,
             )
         )
-        cprint(
-            [
-                ("Created ", Style.SUCCESS),
-                (f"{prefix}.{options['name']}", Style.HIGHLIGHT),
-                (" in ", Style.SUCCESS),
-                (str(target), Style.HIGHLIGHT),
-            ]
-        )
+        if options["verbosity"] > 0:
+            cprint(
+                [
+                    ("Created ", Style.SUCCESS),
+                    (f"{prefix}.{options['name']}", Style.HIGHLIGHT),
+                    (" in ", Style.SUCCESS),
+                    (str(target), Style.HIGHLIGHT),
+                ]
+            )
