@@ -32,7 +32,6 @@ class Conf:
         "django_http_compression",
         "djangx.core",
         "rest_framework",
-        "django_dart_sass",
         "django.contrib.staticfiles",
     ]
     _RELOAD_APP: ClassVar[str] = "django_browser_reload"

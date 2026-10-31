@@ -251,15 +251,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-dart-sass"
-version = "0.1.0"
-source = { git = "https://github.com/kvnwaks/django-dart-sass.git?branch=djv6-support#8e268cd9854fff733ecd1c737c0c7f523ddfc58d" }
-dependencies = [
-    { name = "django" },
-    { name = "python-dart-sass" },
-]
-
-[[package]]
 name = "django-http-compression"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -334,17 +325,17 @@ wheels = [
 
 [[package]]
 name = "djangx"
-version = "0.1.0.dev18"
+version = "0.1.0.dev19"
 source = { editable = "djangx" }
 dependencies = [
     { name = "django" },
     { name = "django-browser-reload" },
-    { name = "django-dart-sass" },
     { name = "django-http-compression", extra = ["brotli"] },
     { name = "django-minify-html" },
     { name = "djangorestframework" },
     { name = "pillow" },
     { name = "pyperclip" },
+    { name = "python-dart-sass" },
     { name = "python-dotenv" },
 ]
 
@@ -360,13 +351,13 @@ vercel = [
 requires-dist = [
     { name = "django", specifier = ">=6.1.2" },
     { name = "django-browser-reload", specifier = ">=1.21.0" },
-    { name = "django-dart-sass", git = "https://github.com/kvnwaks/django-dart-sass.git?branch=djv6-support" },
     { name = "django-http-compression", extras = ["brotli"], specifier = ">=1.4.0" },
     { name = "django-minify-html", specifier = ">=1.14.0" },
     { name = "djangorestframework", specifier = ">=3.18.3" },
     { name = "pillow", specifier = ">=13.0.0" },
     { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'postgres'", specifier = ">=3.3.6" },
     { name = "pyperclip", specifier = ">=1.11.0" },
+    { name = "python-dart-sass", specifier = ">=0.1.0" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "vercel", marker = "extra == 'vercel'", specifier = ">=0.12.1" },
 ]
@@ -377,15 +368,11 @@ name = "djangx-app"
 version = "0.1.0"
 source = { virtual = "mock" }
 dependencies = [
-    { name = "django-dart-sass" },
     { name = "djangx", extra = ["postgres", "vercel"] },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "django-dart-sass", git = "https://github.com/kvnwaks/django-dart-sass.git?branch=djv6-support" },
-    { name = "djangx", extras = ["postgres", "vercel"], editable = "djangx" },
-]
+requires-dist = [{ name = "djangx", extras = ["postgres", "vercel"], editable = "djangx" }]
 
 [[package]]
 name = "djlint"

@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 from typing import Any, ClassVar
 
+from dart_sass import compile_string
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django_dart_sass.registry import compile_string
 
 from ...apps import CoreConfig
 from ...utils.commands import Verbosity
@@ -80,12 +80,17 @@ class Command(BaseCommand):
         ):
             return
 
+        options = dict(getattr(settings, "SASS_DART_OPTIONS", None) or {})
+        options["load_paths"] = [
+            str(self.SCSS_DIR),
+            *options.get("load_paths", []),
+        ]
         result = compile_string(
             self.build_source(
                 getattr(settings, "SASS_INCLUDES", None),
                 getattr(settings, "SASS_CUSTOM_CODE", None),
             ),
-            dict(getattr(settings, "SASS_DART_OPTIONS", None) or {}),
+            options,
         )
         self.OUT.parent.mkdir(parents=True, exist_ok=True)
         self.OUT.write_text(data=result["css"], encoding="utf-8")
@@ -108,11 +113,11 @@ class Command(BaseCommand):
 
         Examples::
 
-            self.build_source(["buttons"])  # "@use 'file:///.../root';\\n@use 'file:///.../buttons';\\n..."
+            self.build_source(["buttons"])  # "@use 'root';\\n@use 'buttons';\\n..."
             self.build_source(["buttons"], ".x { color: red; }")  # same, plus the custom rule at the end
         """
         if includes is None:
-            lines = [f"@use '{(self.SCSS_DIR / 'bootstrap').as_uri()}';"]
+            lines = ["@use 'bootstrap';"]
         else:
             unknown = sorted(set(includes) - set(self.COMPONENTS))
             if unknown:
@@ -120,7 +125,7 @@ class Command(BaseCommand):
 
             chosen = sorted(set(includes), key=self.COMPONENTS.index)
             names = ["root", *chosen, "helpers", "utilities/api"]
-            lines = [f"@use '{(self.SCSS_DIR / n).as_uri()}';" for n in names]
+            lines = [f"@use '{name}';" for name in names]
 
         if custom_code and custom_code.strip():
             lines.append(custom_code.strip())
