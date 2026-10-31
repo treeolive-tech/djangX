@@ -5,7 +5,7 @@ from os import environ
 
 from django.core.management.color import make_style, no_style, supports_color
 
-from .enum import Verbosity
+from .commands import Verbosity
 
 __all__: list[str] = ["Style", "console", "cprint"]
 

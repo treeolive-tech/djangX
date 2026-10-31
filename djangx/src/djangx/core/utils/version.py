@@ -3,7 +3,7 @@
 from typing import Literal, NamedTuple, final
 
 from .console import Style, cprint
-from .enum import Exit
+from .exit import Exit
 
 __all__: list[str] = ["Version", "VersionResult", "print_version"]
 

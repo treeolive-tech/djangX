@@ -18,9 +18,8 @@ Copy text to the clipboard (omit destination)::
     ✓ Copied to clipboard: some text
 """
 
-from ...utils.commands import NonSystemCheckedCommand
+from ...utils.commands import NonSystemCheckedCommand, Verbosity
 from ...utils.copy import copy
-from ...utils.enum import Verbosity
 
 
 class Command(NonSystemCheckedCommand):
@@ -66,6 +65,6 @@ class Command(NonSystemCheckedCommand):
         )
 
         if not success:
-            from ...utils.enum import Exit
+            from ...utils.exit import Exit
 
             raise SystemExit(Exit.ERROR)

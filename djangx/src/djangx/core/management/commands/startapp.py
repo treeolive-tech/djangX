@@ -7,8 +7,8 @@ from django.conf import settings
 from django.core.management.base import CommandError
 from django.core.management.commands.startapp import Command as StartAppCommand
 
+from ...utils.commands import Verbosity
 from ...utils.console import Style, cprint
-from ...utils.enum import Verbosity
 
 
 class Command(StartAppCommand):

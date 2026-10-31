@@ -1,6 +1,5 @@
-from ...utils.commands import NonSystemCheckedCommand
+from ...utils.commands import NonSystemCheckedCommand, Verbosity
 from ...utils.console import Style, cprint
-from ...utils.enum import Verbosity
 from ...utils.string import random_string
 
 
@@ -42,7 +41,7 @@ class Command(NonSystemCheckedCommand):
             from ...utils.copy import copy
 
             if not copy(source=random_str, verbosity=Verbosity.QUIET):
-                from ...utils.enum import Exit
+                from ...utils.exit import Exit
 
                 raise SystemExit(Exit.ERROR)
             cprint(

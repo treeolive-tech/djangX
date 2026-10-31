@@ -2,7 +2,8 @@ from .commands import *
 from .conf import *
 from .console import *
 from .copy import *
-from .enum import *
+from .exit import *
+from .permissions import *
 from .platform import *
 from .string import *
 from .version import *

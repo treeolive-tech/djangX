@@ -9,9 +9,8 @@ from django.core.management.commands.startproject import Command as StartProject
 from django.test import override_settings
 
 from ...apps import CoreConfig
-from ...utils.commands import NonSystemCheckedCommand
+from ...utils.commands import NonSystemCheckedCommand, Verbosity
 from ...utils.console import Style, cprint
-from ...utils.enum import Verbosity
 
 
 class Command(StartProjectCommand, NonSystemCheckedCommand):

@@ -45,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary,pool]>=3.3.6"]
-vercel = ["psycopg[binary,pool]>=3.3.6", "vercel>=0.12.1"]
+vercel = ["vercel>=0.12.1"]
 
 [[tool.uv.index]]
 name = "testpypi"

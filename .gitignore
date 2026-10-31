@@ -1,6 +1,5 @@
 # Environment
 /.venv/
-/uv.lock
 
 # Cache
 /.ruff_cache/

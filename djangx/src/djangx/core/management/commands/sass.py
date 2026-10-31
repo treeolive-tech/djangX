@@ -8,8 +8,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django_dart_sass.registry import compile_string
 
 from ...apps import CoreConfig
+from ...utils.commands import Verbosity
 from ...utils.console import Style, cprint
-from ...utils.enum import Verbosity
 
 
 class Command(BaseCommand):

@@ -2,6 +2,7 @@
 
 import ast
 import re
+from enum import IntEnum
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
@@ -9,8 +10,6 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandParser
 
 from ..apps import CoreConfig
-from .console import Style, cprint
-from .enum import Verbosity
 
 __all__: list[str] = [
     "HELP_COMMANDS",
@@ -19,9 +18,20 @@ __all__: list[str] = [
     "FileCommand",
     "NonSystemCheckedCommand",
     "ServerFileCommand",
+    "Verbosity",
 ]
 
 Result = Literal["wrote", "same", "differs"]
+
+
+class Verbosity(IntEnum):
+    """Django management command output levels."""
+
+    QUIET = 0
+    NORMAL = 1
+    VERBOSE = 2
+    VERY_VERBOSE = 3
+
 
 ENTRYPOINT: str = """\
 from os import environ
@@ -71,20 +81,6 @@ class FileCommand(BaseCommand):
         file.write_text(text)
         return "wrote"
 
-    @staticmethod
-    def _remove(file: Path) -> bool:
-        """Delete `file`; return whether it existed.
-
-        Examples::
-
-            FileCommand._remove(APP_DIR / "wsgi.py")  # True
-            FileCommand._remove(APP_DIR / "wsgi.py")  # False
-        """
-        if not file.is_file():
-            return False
-        file.unlink()
-        return True
-
     def default_dir(self) -> Path:
         """Return the default folder for the generated file."""
         return settings.APP_DIR
@@ -113,14 +109,19 @@ class FileCommand(BaseCommand):
 
     def handle(self, *args: Any, **options: Any) -> None:
         """Remove the file, or create it unless an existing file is preserved."""
+        from django.core.management import call_command
+
+        from .console import Style, cprint
+
         file = self.target_dir(options) / self.filename
         verbosity = Verbosity(options["verbosity"])
 
         if options["remove"]:
-            if self._remove(file):
-                cprint(
-                    f"Removed {file}",
-                    Style.SUCCESS,
+            if file.is_file():
+                call_command(
+                    "rm",
+                    file_name=file.name,
+                    base_dir=str(file.parent),
                     verbosity=verbosity,
                 )
             else:
@@ -212,6 +213,8 @@ class ServerFileCommand(FileCommand):
         """Validate options, create or remove the file, and update its setting if requested."""
         from django.core.management.base import CommandError
 
+        from .console import Style, cprint
+
         if options["set"] and options["remove"]:
             raise CommandError("--set cannot be used with --remove.")
         if options["reset"] and not options["remove"]:
@@ -268,7 +271,7 @@ _FILES: list[Path] = sorted(
 HELP_COMMANDS: set[str] = {"help", "-h"}
 
 SCRIPT_COMMANDS: set[str] = {file.stem for file in _FILES if _is_script(file)}
-"""Commands that subclass `NonSystemCheckedCommand`: {"copy", "platform", "random", "rm"}."""
+"""Commands that subclass `NonSystemCheckedCommand`."""
 
 PROJECT_COMMANDS: set[str] = {file.stem for file in _FILES} - SCRIPT_COMMANDS
-"""Every other command: {"createasgi", "createdeploy", "createmanage", "createwsgi", "runserver", "sass", "startapp"}."""
+"""Every other command."""

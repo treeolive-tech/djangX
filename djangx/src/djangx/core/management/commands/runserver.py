@@ -5,7 +5,7 @@ from django.contrib.staticfiles.management.commands.runserver import (
 )
 from django.core.management import call_command
 
-from ...utils.enum import Verbosity
+from ...utils.commands import Verbosity
 
 
 class Command(RunserverCommand):

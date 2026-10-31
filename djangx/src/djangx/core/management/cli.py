@@ -56,7 +56,7 @@ def _run_project_or_help(command: str) -> None:
                 )
 
             case _:
-                from ..utils.enum import Exit
+                from ..utils.exit import Exit
 
                 cprint(
                     [

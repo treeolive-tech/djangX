@@ -1,9 +1,15 @@
 import shutil
 from pathlib import Path
 
-from ...utils.commands import NonSystemCheckedCommand
+from ...utils.commands import NonSystemCheckedCommand, Verbosity
 from ...utils.console import Style, cprint
-from ...utils.enum import Exit, Verbosity
+from ...utils.exit import Exit
+from ...utils.permissions import (
+    PermissionAction,
+    make_writable_for_delete,
+    permission_message,
+    retry_readonly_delete,
+)
 
 
 class Command(NonSystemCheckedCommand):
@@ -52,12 +58,17 @@ class Command(NonSystemCheckedCommand):
         target = options["file_name"] or options["folder_name"]
         targets = self._resolve_targets(base_dir, target, options["recursive"])
 
-        if options["file_name"]:
-            deleted = self._delete_files(targets, verbosity)
-            target_kind = "file"
-        else:
-            deleted = self._delete_folders(targets, verbosity)
-            target_kind = "folder"
+        try:
+            if options["file_name"]:
+                deleted = self._delete_files(targets, verbosity)
+                target_kind = "file"
+            else:
+                deleted = self._delete_folders(targets, verbosity)
+                target_kind = "folder"
+        except PermissionError as error:
+            path = error.filename or base_dir
+            cprint(permission_message(PermissionAction.DELETE, path), Style.ERROR)
+            raise SystemExit(Exit.ERROR) from error
 
         if deleted == 0:
             suffix = " recursively" if options["recursive"] else ""
@@ -85,10 +96,14 @@ class Command(NonSystemCheckedCommand):
             self._resolve_targets(base, "__pycache__", False)  # only base / "__pycache__"
         """
         if recursive and len(Path(target).parts) == 1:
-            return [path for path in base_dir.rglob(target) if path.exists()]
+            return [
+                path
+                for path in base_dir.rglob(target)
+                if path.exists() or path.is_symlink()
+            ]
 
-        candidate = (base_dir / target).resolve()
-        return [candidate] if candidate.exists() else []
+        candidate = base_dir / target
+        return [candidate] if candidate.exists() or candidate.is_symlink() else []
 
     def _delete_files(self, paths: list[Path], verbosity: Verbosity) -> int:
         """Unlink each file or symlink in `paths` and return how many were deleted.
@@ -102,7 +117,12 @@ class Command(NonSystemCheckedCommand):
             if (
                 path.is_file() or path.is_symlink()
             ):  # is_file() is False for dangling links
-                path.unlink()
+                try:
+                    path.unlink()
+                except PermissionError:
+                    if not make_writable_for_delete(path):
+                        raise
+                    path.unlink()
                 cprint(
                     f"Deleted file: {path}",
                     Style.INFO,
@@ -123,7 +143,7 @@ class Command(NonSystemCheckedCommand):
         # Deepest first, so a parent's rmtree doesn't remove a child still in the list.
         for path in sorted(paths, key=lambda p: len(p.parts), reverse=True):
             if path.is_dir() and not path.is_symlink():
-                shutil.rmtree(path)
+                shutil.rmtree(path, onexc=retry_readonly_delete)
                 cprint(
                     f"Deleted folder: {path}",
                     Style.INFO,
