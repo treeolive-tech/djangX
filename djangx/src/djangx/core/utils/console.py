@@ -1,18 +1,17 @@
-"""Rich console helpers with a shared, themed output style."""
+"""Console helpers using Django's management command color styles."""
 
 from enum import StrEnum
+from os import environ
 
-from rich.console import Console
-from rich.text import Text
-from rich.theme import Theme
+from django.core.management.color import make_style, no_style, supports_color
 
 from .enum import Verbosity
 
-__all__: list[str] = ["THEME", "Style", "console", "cprint"]
+__all__: list[str] = ["Style", "console", "cprint"]
 
 
 class Style(StrEnum):
-    """Semantic style names, resolved to colours by :data:`THEME`.
+    """Semantic style names, resolved to Django management styles.
 
     Examples::
 
@@ -27,18 +26,28 @@ class Style(StrEnum):
     HIGHLIGHT = "highlight"
 
 
-THEME = Theme(
-    styles={
-        Style.ERROR: "bold red",
-        Style.WARNING: "bold yellow",
-        Style.SUCCESS: "bold green",
-        Style.INFO: "bold cyan",
-        Style.DEBUG: "bold magenta",
-        Style.HIGHLIGHT: "bold blue",
-    }
+_DEFAULT_COLOR_SETTINGS = (
+    "error=red,bold",
+    "warning=yellow,bold",
+    "success=green,bold",
+    "http_info=cyan,bold",
+    "sql_field=magenta,bold",
+    "notice=blue,bold",
 )
 
-console = Console(theme=THEME)
+_color_settings = ";".join(_DEFAULT_COLOR_SETTINGS)
+if custom_colors := environ.get("DJANGO_COLORS"):
+    _color_settings = f"{_color_settings};{custom_colors}"
+
+console = make_style(_color_settings) if supports_color() else no_style()
+_STYLE_NAMES = {
+    Style.ERROR: "ERROR",
+    Style.WARNING: "WARNING",
+    Style.SUCCESS: "SUCCESS",
+    Style.INFO: "HTTP_INFO",
+    Style.DEBUG: "SQL_FIELD",
+    Style.HIGHLIGHT: "NOTICE",
+}
 
 
 def cprint(
@@ -49,7 +58,7 @@ def cprint(
     verbosity: Verbosity = Verbosity.NORMAL,
     min_verbosity: Verbosity = Verbosity.NORMAL,
 ) -> None:
-    """Print text, or ``(segment, style)`` pairs, in rich styles.
+    """Print text, or ``(segment, style)`` pairs, in Django management styles.
 
     Use ``""`` as the style for an unstyled segment.
 
@@ -62,4 +71,12 @@ def cprint(
         return
 
     segments = [(text, style)] if isinstance(text, str) else text
-    console.print(Text.assemble(*segments), end=end)
+    output = "".join(
+        getattr(console, _STYLE_NAMES.get(segment_style, ""), lambda value: value)(
+            segment
+        )
+        if segment_style
+        else segment
+        for segment, segment_style in segments
+    )
+    print(output, end=end)

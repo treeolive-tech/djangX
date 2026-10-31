@@ -11,7 +11,7 @@ djx = "djangx.core.management.cli:main"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev17"
+version = "0.1.0.dev18"
 description = ""
 readme = "README.md"
 license = "MIT"
@@ -41,7 +41,6 @@ dependencies = [
     "pillow>=13.0.0",
     "pyperclip>=1.11.0",
     "python-dotenv>=1.2.4",
-    "rich>=15.0.0",
 ]
 
 [project.optional-dependencies]

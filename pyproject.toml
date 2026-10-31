@@ -12,6 +12,7 @@ sequence = [{ cmd = "uv format" }, { cmd = "djlint . --reformat" }]
 
 [tool.poe.tasks.lint]
 sequence = [
+    { cmd = "uv lock --check" },
     { cmd = "uv format --check" },
     { cmd = "uv check" },
     { cmd = "djlint . --check" },
