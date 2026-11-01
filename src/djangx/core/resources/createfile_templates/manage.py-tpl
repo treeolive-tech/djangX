@@ -1,0 +1,14 @@
+"""For development, run `djangx` or `djx` instead."""
+
+from os import environ
+
+from djangx.core.utils.conf import settings_module
+
+environ.setdefault(key="DJANGO_SETTINGS_MODULE", value=settings_module())
+
+if __name__ == "__main__":
+    from sys import argv
+
+    from django.core.management import execute_from_command_line
+
+    execute_from_command_line(argv)

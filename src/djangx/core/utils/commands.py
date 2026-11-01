@@ -33,17 +33,6 @@ class Verbosity(IntEnum):
     VERY_VERBOSE = 3
 
 
-ENTRYPOINT: str = """\
-from os import environ
-
-from django.core.{kind} import get_{kind}_application
-from djangx.core.utils.conf import settings_module
-
-environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module())
-application = get_{kind}_application()
-"""
-
-
 class NonSystemCheckedCommand(BaseCommand):
     """Base for commands that skip Django system checks."""
 
@@ -64,6 +53,7 @@ class FileCommand(BaseCommand):
 
     filename: ClassVar[str]
     template: ClassVar[str] = ""
+    template_file: ClassVar[Path | None] = None
 
     @staticmethod
     def _write(file: Path, text: str, *, overwrite: bool = False) -> Result:
@@ -87,7 +77,7 @@ class FileCommand(BaseCommand):
 
     def content(self) -> str:
         """Return the text written when creating the file."""
-        return self.template
+        return self.template_file.read_text() if self.template_file else self.template
 
     def target_dir(self, options: dict[str, Any]) -> Path:
         """Return `--dir`, or the default folder."""
@@ -189,10 +179,6 @@ class ServerFileCommand(FileCommand):
     def setting(self) -> str:
         """Return the settings variable, e.g. `"ASGI_APPLICATION"`."""
         return f"{self.kind.upper()}_APPLICATION"
-
-    def content(self) -> str:
-        """Return the entry-point template for this command."""
-        return ENTRYPOINT.format(kind=self.kind)
 
     def add_arguments(self, parser: CommandParser) -> None:
         """Add file options and mutually exclusive `--set`/`--reset` options."""
