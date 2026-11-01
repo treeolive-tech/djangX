@@ -4,7 +4,6 @@ from os.path import expandvars
 from pathlib import Path
 from shutil import Error as ShutilError
 from shutil import copy2, copytree, rmtree
-from typing import TypeAlias
 
 from .commands import Verbosity
 from .console import Style, cprint
@@ -12,7 +11,7 @@ from .permissions import PermissionAction, permission_message
 
 __all__: list[str] = ["copy"]
 
-_PathLike: TypeAlias = str | Path
+type _PathLike = str | Path
 
 
 def copy(

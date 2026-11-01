@@ -3,8 +3,8 @@
 from sys import argv
 
 from ... import PKG_NAME, PKG_VERBOSE_NAME
-from ..utils.commands import HELP_COMMANDS, PROJECT_COMMANDS, SCRIPT_COMMANDS
-from ..utils.console import Style, cprint
+from ..utils.commands import command_registry
+from ..utils.console import Style, console, cprint
 
 
 def _run_builtin(*, scripts_only: bool = False) -> None:
@@ -13,8 +13,10 @@ def _run_builtin(*, scripts_only: bool = False) -> None:
     Examples::
 
         _run_builtin()  # every djangX command
-        _run_builtin(scripts_only=True)  # hides PROJECT_COMMANDS, for help outside a project
+        _run_builtin(scripts_only=True)  # hides project-specific commands outside a project
     """
+    console.configure()
+
     from django import setup
     from django.conf import settings
     from django.core.management import execute_from_command_line, get_commands
@@ -25,7 +27,7 @@ def _run_builtin(*, scripts_only: bool = False) -> None:
         settings.configure(INSTALLED_APPS=[CoreConfig.name])
         setup()
 
-    hidden = PROJECT_COMMANDS if scripts_only else set()
+    hidden = command_registry.project_commands if scripts_only else set()
     commands = get_commands()
     for name, app in list(commands.items()):
         if app == "django.core" or name in hidden:
@@ -41,7 +43,7 @@ def _run_project_or_help(command: str) -> None:
     try:
         module = settings_module()
     except SettingsNotFound:
-        if command not in HELP_COMMANDS:
+        if command not in command_registry.help_commands:
             from ..utils.exit import Exit
 
             cprint(
@@ -89,6 +91,7 @@ def _run_project_or_help(command: str) -> None:
         if dotenv.is_file():
             load_dotenv(dotenv)
 
+        console.configure()
         execute_from_command_line(argv)
 
 
@@ -108,7 +111,7 @@ def main() -> None:
 
             raise SystemExit(print_version(PKG_NAME))
 
-        case _ if command in SCRIPT_COMMANDS:
+        case _ if command in command_registry.script_commands:
             _run_builtin()
 
         case _:

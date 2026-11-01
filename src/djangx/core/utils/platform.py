@@ -3,10 +3,10 @@
 from platform import machine, system
 from typing import Final
 
-__all__: list[str] = ["Platform"]
+__all__: list[str] = ["platform"]
 
 
-class Platform:
+class _Platform:
     """Detect the current OS and CPU architecture as normalised codes.
 
     Raises:
@@ -77,3 +77,6 @@ class Platform:
             print(Platform())  # windows-x64
         """
         return f"{self.os_name}-{self.architecture}"
+
+
+platform = _Platform()

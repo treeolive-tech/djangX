@@ -12,16 +12,14 @@ from django.core.management.base import BaseCommand, CommandParser
 from ..apps import CoreConfig
 
 __all__: list[str] = [
-    "HELP_COMMANDS",
-    "PROJECT_COMMANDS",
-    "SCRIPT_COMMANDS",
     "FileCommand",
     "NonSystemCheckedCommand",
     "ServerFileCommand",
     "Verbosity",
+    "command_registry",
 ]
 
-Result = Literal["wrote", "same", "differs"]
+type _Result = Literal["wrote", "same", "differs"]
 
 
 class Verbosity(IntEnum):
@@ -56,7 +54,7 @@ class FileCommand(BaseCommand):
     template_file: ClassVar[Path | None] = None
 
     @staticmethod
-    def _write(file: Path, text: str, *, overwrite: bool = False) -> Result:
+    def _write(file: Path, text: str, *, overwrite: bool = False) -> _Result:
         """Write `text` to `file`; an existing file is kept unless `overwrite`.
 
         Examples::
@@ -226,38 +224,39 @@ class ServerFileCommand(FileCommand):
             cprint(f"{self.setting} is already {value}.", verbosity=verbosity)
 
 
-def _is_script(file: Path) -> bool:
-    """Return whether `file` has a top-level `Command` with the direct base `NonSystemCheckedCommand`.
+class _CommandRegistry:
+    """Discover and classify built-in management command names."""
 
-    Parsed with `ast`, not imported, so no command module loads (or imports this one back).
-
-    Examples::
-
-        _is_script(Path("rm.py"))  # True
-        _is_script(Path("sass.py"))  # False
-    """
-    tree = ast.parse(file.read_text(encoding="utf-8"))
-    return any(
-        isinstance(node, ast.ClassDef)
-        and node.name == "Command"
-        and any(
-            isinstance(base, ast.Name) and base.id == "NonSystemCheckedCommand"
-            for base in node.bases
+    def __init__(self) -> None:
+        self._files: list[Path] = sorted(
+            file
+            for file in (CoreConfig.base / "management" / "commands").glob("*.py")
+            if not file.stem.startswith("_")
         )
-        for node in tree.body
-    )
+        self.help_commands: set[str] = {"help", "-h"}
+        self.script_commands: set[str] = {
+            file.stem for file in self._files if self._is_script(file)
+        }
+        self.project_commands: set[str] = {
+            file.stem for file in self._files
+        } - self.script_commands
+
+    @staticmethod
+    def _is_script(file: Path) -> bool:
+        """Return whether `file` defines a command subclassing `NonSystemCheckedCommand`.
+
+        Parse the file rather than importing it to avoid command-module side effects.
+        """
+        tree = ast.parse(file.read_text(encoding="utf-8"))
+        return any(
+            isinstance(node, ast.ClassDef)
+            and node.name == "Command"
+            and any(
+                isinstance(base, ast.Name) and base.id == "NonSystemCheckedCommand"
+                for base in node.bases
+            )
+            for node in tree.body
+        )
 
 
-_FILES: list[Path] = sorted(
-    file
-    for file in (CoreConfig.base / "management" / "commands").glob("*.py")
-    if not file.stem.startswith("_")
-)
-
-HELP_COMMANDS: set[str] = {"help", "-h"}
-
-SCRIPT_COMMANDS: set[str] = {file.stem for file in _FILES if _is_script(file)}
-"""Commands that subclass `NonSystemCheckedCommand`."""
-
-PROJECT_COMMANDS: set[str] = {file.stem for file in _FILES} - SCRIPT_COMMANDS
-"""Every other command."""
+command_registry = _CommandRegistry()

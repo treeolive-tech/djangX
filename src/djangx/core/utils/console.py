@@ -1,9 +1,11 @@
 """Console helpers using Django's management command color styles."""
 
+import sys
 from enum import StrEnum
 from os import environ
+from typing import ClassVar
 
-from django.core.management.color import make_style, no_style, supports_color
+from django.core.management.color import color_style
 
 from .commands import Verbosity
 
@@ -11,45 +13,66 @@ __all__: list[str] = ["Style", "console", "cprint"]
 
 
 class Style(StrEnum):
-    """Semantic style names, resolved to Django management styles.
+    """Semantic style names; each value is a Django palette role.
 
-    Examples::
-
-        cprint("Failed", Style.ERROR)  # bold red
-        cprint("Plain text", Style.PLAIN)  # no style
+    ``PLAIN`` applies no styling. Every other value is the role name used in
+    ``DJANGO_COLORS`` (e.g. ``INFO`` is configured as ``http_info=...``).
     """
 
     PLAIN = "plain"
     ERROR = "error"
     WARNING = "warning"
     SUCCESS = "success"
-    INFO = "info"
-    DEBUG = "debug"
-    HIGHLIGHT = "highlight"
+    INFO = "http_info"
+    DEBUG = "sql_field"
+    HIGHLIGHT = "notice"
 
 
-_DEFAULT_COLOR_SETTINGS = (
-    "error=red,bold",
-    "warning=yellow,bold",
-    "success=green,bold",
-    "http_info=cyan,bold",
-    "sql_field=magenta,bold",
-    "notice=blue,bold",
-)
+class _Console:
+    COLORS: ClassVar[dict[Style, str]] = {
+        Style.ERROR: "red,bold",
+        Style.WARNING: "yellow,bold",
+        Style.SUCCESS: "green,bold",
+        Style.INFO: "cyan,bold",
+        Style.DEBUG: "magenta,bold",
+        Style.HIGHLIGHT: "blue,bold",
+    }
 
-_color_settings = ";".join(_DEFAULT_COLOR_SETTINGS)
-if custom_colors := environ.get("DJANGO_COLORS"):
-    _color_settings = f"{_color_settings};{custom_colors}"
+    DJANGO_COLOR_DEFAULTS: ClassVar[str] = "dark;" + ";".join(
+        f"{style}={spec}" for style, spec in COLORS.items()
+    )
 
-console = make_style(_color_settings) if supports_color() else no_style()
-_STYLE_NAMES = {
-    Style.ERROR: "ERROR",
-    Style.WARNING: "WARNING",
-    Style.SUCCESS: "SUCCESS",
-    Style.INFO: "HTTP_INFO",
-    Style.DEBUG: "SQL_FIELD",
-    Style.HIGHLIGHT: "NOTICE",
-}
+    def __init__(self) -> None:
+        self._style = color_style()
+        self._configured_colors: str | None = None
+        self._configured_stream: object | None = None
+
+    def _configure_django_colors(self) -> str:
+        """Prepend our defaults to ``DJANGO_COLORS`` and return the result."""
+        defaults = self.DJANGO_COLOR_DEFAULTS
+        user_colors = environ.get("DJANGO_COLORS", "")
+        if user_colors == defaults or user_colors.startswith(f"{defaults};"):
+            return user_colors
+
+        colors = f"{defaults};{user_colors}" if user_colors else defaults
+        environ["DJANGO_COLORS"] = colors
+        return colors
+
+    def configure(self) -> None:
+        colors = self._configure_django_colors()
+        if colors == self._configured_colors and sys.stdout is self._configured_stream:
+            return
+        self._style.__dict__.update(color_style().__dict__)
+        self._configured_colors = colors
+        self._configured_stream = sys.stdout
+
+    def apply(self, text: str, style: str) -> str:
+        """Return ``text`` styled; plain or unknown styles are left as-is."""
+        formatter = getattr(self._style, style.upper(), None)
+        return formatter(text) if formatter else text
+
+
+console = _Console()
 
 
 def cprint(
@@ -66,19 +89,14 @@ def cprint(
 
     Examples::
 
-        cprint("Build failed", Style.ERROR)
+        cprint("Failed", Style.ERROR)
         cprint([("Copied ", Style.SUCCESS), ("a.txt", Style.HIGHLIGHT)])
     """
     if verbosity < min_verbosity:
         return
 
+    console.configure()
     segments = [(text, style)] if isinstance(text, str) else text
-    output = "".join(
-        segment
-        if segment_style == Style.PLAIN
-        else getattr(console, _STYLE_NAMES.get(segment_style, ""), lambda value: value)(
-            segment
-        )
-        for segment, segment_style in segments
+    print(
+        "".join(console.apply(seg, seg_style) for seg, seg_style in segments), end=end
     )
-    print(output, end=end)

@@ -6,7 +6,7 @@ from enum import StrEnum
 from os import name as os_name
 from pathlib import Path
 
-from .platform import Platform
+from .platform import platform
 
 __all__: list[str] = [
     "PermissionAction",
@@ -65,6 +65,6 @@ def retry_readonly_delete(
 
 def _platform_name() -> str:
     try:
-        return Platform().os_name
+        return platform.os_name
     except OSError, ValueError:
         return "windows" if os_name == "nt" else "unknown"
