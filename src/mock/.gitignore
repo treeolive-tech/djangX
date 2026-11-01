@@ -6,3 +6,8 @@
 
 # Static & media files
 /public/
+
+# Deploy files
+/.github/
+/app/*sgi.py
+/manage.py
