@@ -1,0 +1,40 @@
+[project]
+name = "{{ project_name }}"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+dependencies = ["djangx{% if vercel %}[vercel]{% endif %}>=0.1.0.dev16"]
+{% if vercel %}
+[tool.vercel.scripts]
+build = "npm i -g sass-embedded && djx sass --build && djx makemigrations && djx migrate"
+{% endif %}
+[dependency-groups]
+dev = ["django-stubs>=6.1.2", "djlint>=1.48.0", "poethepoet>=0.49.0"]
+
+[tool.uv]
+preview-features = ["format-command", "check-command"]
+
+[tool.poe.tasks.format]
+sequence = [{ cmd = "uv format" }, { cmd = "djlint . --reformat" }]
+
+[tool.poe.tasks.lint]
+sequence = [
+    { cmd = "uv lock --check" },
+    { cmd = "uv format --check" },
+    { cmd = "uv check" },
+    { cmd = "djlint . --check" },
+    { cmd = "djlint . --lint" },
+]
+
+[tool.poe.tasks.add]
+sequence = [{ ref = "lint" }, { cmd = "git add ." }]
+
+[tool.ruff]
+exclude = ["*/migrations/*"]
+
+[tool.djlint]
+format_css = true
+format_js = true
+blank_line_before_tag = "block,list"
+blank_line_after_tag = "endblock,endlist"
+ignore = "H016,H030,H031"

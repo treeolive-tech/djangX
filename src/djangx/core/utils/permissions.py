@@ -66,5 +66,5 @@ def retry_readonly_delete(
 def _platform_name() -> str:
     try:
         return Platform().os_name
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return "windows" if os_name == "nt" else "unknown"

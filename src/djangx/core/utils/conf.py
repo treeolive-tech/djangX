@@ -1,6 +1,7 @@
 """Project settings: finds the project's settings module and builds djangX's settings entries."""
 
 from functools import cache
+from importlib.util import find_spec
 from pathlib import Path
 from typing import ClassVar
 
@@ -28,8 +29,6 @@ def settings_module() -> str:
 class Conf:
     # `djangx.core` must come before `django.contrib.staticfiles` so its `runserver` wins.
     _REQUIRED_APPS: ClassVar[list[str]] = [
-        "django_minify_html",
-        "django_http_compression",
         "djangx.core",
         "rest_framework",
         "django.contrib.staticfiles",
@@ -44,6 +43,35 @@ class Conf:
     _RELOAD_MIDDLEWARE: ClassVar[str] = (
         "django_browser_reload.middleware.BrowserReloadMiddleware"
     )
+
+    @staticmethod
+    def _is_installed(module_name: str) -> bool:
+        """Return whether an optional package is importable."""
+        return find_spec(module_name) is not None
+
+    @classmethod
+    def _optional_apps(cls, *, debug: bool = False) -> list[str]:
+        """Return the optional apps that are available to the current environment."""
+        apps: list[str] = []
+        if debug and cls._is_installed(cls._RELOAD_APP):
+            apps.append(cls._RELOAD_APP)
+        if cls._is_installed("django_minify_html"):
+            apps.append("django_minify_html")
+        if cls._is_installed("django_http_compression"):
+            apps.append("django_http_compression")
+        return apps
+
+    @classmethod
+    def _optional_middleware(cls, *, debug: bool = False) -> list[str]:
+        """Return optional HTML/request middleware that is currently available."""
+        middleware: list[str] = []
+        if cls._is_installed("django_http_compression"):
+            middleware.append(cls._HTML_MIDDLEWARE[0])
+        if cls._is_installed("django_minify_html"):
+            middleware.append(cls._HTML_MIDDLEWARE[1])
+        if debug and cls._is_installed(cls._RELOAD_APP):
+            middleware.append(cls._RELOAD_MIDDLEWARE)
+        return middleware
 
     @staticmethod
     def _discover_apps(app_dir: Path) -> list[str]:
@@ -72,9 +100,7 @@ class Conf:
 
             Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "django_minify_html", ..., "django.contrib.staticfiles"]
         """
-        ours: list[str] = (
-            [cls._RELOAD_APP, *cls._REQUIRED_APPS] if debug else cls._REQUIRED_APPS
-        )
+        ours: list[str] = [*cls._optional_apps(debug=debug), *cls._REQUIRED_APPS]
         found: list[str] = cls._discover_apps(dir)
         return [*(app for app in [*found, *defaults] if app not in ours), *ours]
 
@@ -86,5 +112,5 @@ class Conf:
 
             Conf.middleware(["django.middleware.security.SecurityMiddleware"])  # [..., "...HttpCompressionMiddleware", "...MinifyHtmlMiddleware"]
         """
-        ours = [*cls._HTML_MIDDLEWARE, *([cls._RELOAD_MIDDLEWARE] if debug else [])]
+        ours = cls._optional_middleware(debug=debug)
         return [*(m for m in middlewares if m not in ours), *ours]

@@ -1,5 +1,52 @@
-[tool.uv.workspace]
-members = ["djangx", "mock"]
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[project]
+name = "djangX"
+version = "0.1.0.dev19"
+description = ""
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
+maintainers = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Framework :: Django",
+    "Framework :: Django :: 6.1",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["djangx", "django", "bootstrap", "sass"]
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.1.2",
+    "djangorestframework>=3.18.3",
+    "pillow>=13.0.0",
+    "pyperclip>=1.11.0",
+    "python-dotenv>=1.2.4",
+    "python-dart-sass>=0.1.0",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary,pool]>=3.3.6"]
+vercel = ["vercel>=0.12.1"]
+reload = ["django-browser-reload>=1.21.0"]
+compression = ["django-http-compression[brotli]>=1.4.0"]
+minify = ["django-minify-html>=1.14.0"]
+
+[project.scripts]
+djangx = "djangx.core.management.cli:main"
+djx = "djangx.core.management.cli:main"
+
+[project.urls]
+Repository = "https://github.com/treeolive-tech/djangX.git"
 
 [dependency-groups]
 dev = ["django-stubs>=6.1.2", "djlint>=1.48.0", "poethepoet>=0.49.0"]
@@ -31,3 +78,9 @@ format_js = true
 blank_line_before_tag = "block,list"
 blank_line_after_tag = "endblock,endlist"
 ignore = "H016,H030,H031"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
