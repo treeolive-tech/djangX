@@ -16,8 +16,10 @@ class Style(StrEnum):
     Examples::
 
         cprint("Failed", Style.ERROR)  # bold red
+        cprint("Plain text", Style.PLAIN)  # no style
     """
 
+    PLAIN = "plain"
     ERROR = "error"
     WARNING = "warning"
     SUCCESS = "success"
@@ -52,7 +54,7 @@ _STYLE_NAMES = {
 
 def cprint(
     text: str | list[tuple[str, str]],
-    style: str = "",
+    style: str = Style.PLAIN,
     end: str = "\n",
     *,
     verbosity: Verbosity = Verbosity.NORMAL,
@@ -60,7 +62,7 @@ def cprint(
 ) -> None:
     """Print text, or ``(segment, style)`` pairs, in Django management styles.
 
-    Use ``""`` as the style for an unstyled segment.
+    Use ``Style.PLAIN`` for an unstyled segment.
 
     Examples::
 
@@ -72,11 +74,11 @@ def cprint(
 
     segments = [(text, style)] if isinstance(text, str) else text
     output = "".join(
-        getattr(console, _STYLE_NAMES.get(segment_style, ""), lambda value: value)(
+        segment
+        if segment_style == Style.PLAIN
+        else getattr(console, _STYLE_NAMES.get(segment_style, ""), lambda value: value)(
             segment
         )
-        if segment_style
-        else segment
         for segment, segment_style in segments
     )
     print(output, end=end)

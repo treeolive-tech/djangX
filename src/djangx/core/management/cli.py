@@ -41,36 +41,38 @@ def _run_project_or_help(command: str) -> None:
     try:
         module = settings_module()
     except SettingsNotFound:
-        match argv[1]:
-            case cmd if cmd in HELP_COMMANDS:
-                cprint(
-                    [
-                        ("No app/settings.py found.", Style.WARNING),
-                        (
-                            "\n\nTo see project-specific commands, run this from the root of a ",
-                            "",
-                        ),
-                        (PKG_VERBOSE_NAME, Style.HIGHLIGHT),
-                        (" project (the folder that contains `app/settings.py`).", ""),
-                    ]
-                )
+        if command not in HELP_COMMANDS:
+            from ..utils.exit import Exit
 
-            case _:
-                from ..utils.exit import Exit
-
-                cprint(
-                    [
-                        ("Unknown command: ", Style.ERROR),
-                        (f"'{argv[1]}'", Style.HIGHLIGHT),
-                        ("\nType ", ""),
-                        (f"'{PKG_NAME} help'", Style.HIGHLIGHT),
-                        (" for usage.", ""),
-                    ]
-                )
-                raise SystemExit(Exit.ERROR)
-
-        if command in HELP_COMMANDS:
-            _run_builtin(scripts_only=True)
+            cprint(
+                [
+                    ("Unknown command: ", Style.ERROR),
+                    (f"'{command}'", Style.HIGHLIGHT),
+                    ("\nType ", Style.PLAIN),
+                    (f"'{PKG_NAME} help'", Style.HIGHLIGHT),
+                    (" for usage.", Style.PLAIN),
+                ]
+            )
+            raise SystemExit(Exit.ERROR)
+        else:
+            try:
+                _run_builtin(scripts_only=True)
+            finally:
+                if len(argv) == 2:
+                    cprint(
+                        [
+                            ("\nNo app/settings.py found.", Style.WARNING),
+                            (
+                                "\n\nTo see project-specific commands, run this from the root of a ",
+                                Style.PLAIN,
+                            ),
+                            (PKG_VERBOSE_NAME, Style.HIGHLIGHT),
+                            (
+                                " project (the folder that contains `app/settings.py`).",
+                                Style.PLAIN,
+                            ),
+                        ]
+                    )
     else:
         from os import environ
         from pathlib import Path
