@@ -193,6 +193,9 @@ SASS_DART_OPTIONS = {
     "source_map": True,
 }
 
+# Optional Sass command or path; unset to use PATH or install through nodeenv.
+SASS_EXECUTABLE: str | None = None
+
 SASS_THEME_COLORS: dict[str, str] = {
     "primary": "#007bff",
     "secondary": "#6c757d",

@@ -1,31 +1,31 @@
 import hashlib
 import json
+import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, ClassVar
 
-from dart_sass import compile_string
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from ...apps import CoreConfig
 from ...utils.commands import Verbosity
 from ...utils.console import Style, cprint
+from ...utils.sass import Sass
 
 
 class Command(BaseCommand):
-    help: str = "Manage Sass: --build compiles Bootstrap (chosen via SASS_INCLUDES) into custom.css."
+    help: str = "Manage Sass: --build compiles Bootstrap (chosen via SASS_INCLUDES) into custom.css in STATIC_ROOT."
 
-    SCSS_DIR: ClassVar[Path] = CoreConfig.resources / "vendor" / "bootstrap" / "scss"
-    OUT: ClassVar[Path] = (
-        CoreConfig.static / "vendor" / "bootstrap" / "css" / "custom.css"
-    )
-    STAMP: ClassVar[Path] = OUT.with_name(".settings-hash")
+    SCSS_DIR: ClassVar[Path] = CoreConfig.resources / Sass.SCSS_RESOURCES_DIR
+    NODEENV_DIR: ClassVar[Path] = Path(sys.prefix)
 
     # Settings whose change should trigger a recompile.
     WATCHED_SETTINGS: ClassVar[tuple[str, ...]] = (
         "SASS_INCLUDES",
         "SASS_DART_OPTIONS",
         "SASS_CUSTOM_CODE",
+        "SASS_THEME_COLORS",
     )
 
     # Bootstrap 6 partials in `bootstrap.scss` order. `root` and the trailing
@@ -37,6 +37,16 @@ class Command(BaseCommand):
         "pagination", "placeholder", "popover", "progress", "spinner", "stepper",
         "toasts", "tooltip", "transitions",
     ]  # fmt: skip
+
+    @property
+    def out(self) -> Path:
+        """Return the compiled CSS file inside `STATIC_ROOT`."""
+        return Path(settings.STATIC_ROOT) / Sass.CSS_STATIC_DIR / Sass.CSS_FILE
+
+    @property
+    def stamp(self) -> Path:
+        """Return the settings-hash file stored next to `out`."""
+        return self.out.with_name(".settings-hash")
 
     def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
@@ -50,55 +60,91 @@ class Command(BaseCommand):
             action="store_true",
             help="With --build, skip compiling when the watched settings are unchanged.",
         )
+        install_group = parser.add_mutually_exclusive_group()
+        install_group.add_argument(
+            "--install",
+            action="store_true",
+            help="Install Sass in the current Python virtual environment.",
+        )
+        install_group.add_argument(
+            "--no-install",
+            dest="auto_install",
+            action="store_false",
+            default=True,
+            help="Do not automatically install Sass when building.",
+        )
+        parser.add_argument(
+            "--sass-executable",
+            metavar="PATH",
+            help="Use this installed Sass executable instead of PATH or nodeenv.",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
-        if not options["build"]:
+        verbosity = Verbosity(options["verbosity"])
+
+        if options["install"]:
+            Sass.install_sass(self.NODEENV_DIR)
+            cprint(
+                [
+                    ("Installed Sass in ", Style.SUCCESS),
+                    (str(self.NODEENV_DIR), Style.HIGHLIGHT),
+                ],
+                verbosity=verbosity,
+            )
+
+        if options["build"]:
+            self.build(
+                if_changed=options["if_changed"],
+                auto_install=options["auto_install"],
+                sass_executable=options["sass_executable"],
+                verbosity=verbosity,
+            )
+        elif not options["install"]:
             raise CommandError("Nothing to do. Pass --build (-b).")
-        self.build(
-            if_changed=options["if_changed"],
-            verbosity=Verbosity(options["verbosity"]),
-        )
 
     def build(
         self,
         *,
         if_changed: bool = False,
+        auto_install: bool = True,
+        sass_executable: str | Path | None = None,
         verbosity: Verbosity = Verbosity.NORMAL,
     ) -> None:
-        """Compile SCSS into `OUT`, optionally skipping when settings are unchanged.
+        """Compile SCSS into `out`, optionally skipping when settings are unchanged.
 
         Examples::
 
             self.build(if_changed=True)  # no output if nothing changed
         """
-        fingerprint = self.fingerprint()
+        sass_executable = sass_executable or getattr(settings, "SASS_EXECUTABLE", None)
+        fingerprint = self.fingerprint(sass_executable)
         if (
             if_changed
-            and self.OUT.exists()
-            and self.STAMP.exists()
-            and self.STAMP.read_text() == fingerprint
+            and self.out.exists()
+            and self.stamp.exists()
+            and self.stamp.read_text() == fingerprint
         ):
             return
 
         options = dict(getattr(settings, "SASS_DART_OPTIONS", None) or {})
-        options["load_paths"] = [
-            str(self.SCSS_DIR),
-            *options.get("load_paths", []),
-        ]
-        result = compile_string(
+        options["load_paths"] = [str(self.SCSS_DIR), *options.get("load_paths", [])]
+
+        Sass.compile_scss(
             self.build_source(
                 getattr(settings, "SASS_INCLUDES", None),
                 getattr(settings, "SASS_CUSTOM_CODE", None),
             ),
+            self.out,
             options,
+            nodeenv_dir=self.NODEENV_DIR,
+            sass_executable=sass_executable,
+            auto_install=auto_install,
         )
-        self.OUT.parent.mkdir(parents=True, exist_ok=True)
-        self.OUT.write_text(data=result["css"], encoding="utf-8")
-        self.STAMP.write_text(fingerprint)
+        self.stamp.write_text(fingerprint)
         cprint(
             [
                 ("Compiled SCSS to ", Style.SUCCESS),
-                (str(self.OUT), Style.HIGHLIGHT),
+                (str(self.out), Style.HIGHLIGHT),
             ],
             verbosity=verbosity,
         )
@@ -108,13 +154,13 @@ class Command(BaseCommand):
     ) -> str:
         """Return the SCSS entry source for the chosen Bootstrap parts.
 
-        `None` includes all of Bootstrap (option A). Any `custom_code` is appended
-        after the Bootstrap imports.
+        `None` includes all of Bootstrap. Any `custom_code` is appended after the
+        Bootstrap imports.
 
         Examples::
 
             self.build_source(["buttons"])  # "@use 'root';\\n@use 'buttons';\\n..."
-            self.build_source(["buttons"], ".x { color: red; }")  # same, plus the custom rule at the end
+            self.build_source(["buttons"], ".x { color: red; }")  # plus the custom rule
         """
         if includes is None:
             lines = ["@use 'bootstrap';"]
@@ -132,14 +178,16 @@ class Command(BaseCommand):
 
         return "\n".join(lines)
 
-    def fingerprint(self) -> str:
-        """Return a hash of the watched settings.
+    def fingerprint(self, sass_executable: str | Path | None = None) -> str:
+        """Return a hash of the watched settings, Sass executable and djangX version.
 
         Examples::
 
             self.fingerprint()  # "9f2c...e1"
         """
         data = {name: getattr(settings, name, None) for name in self.WATCHED_SETTINGS}
+        data["sass_executable"] = sass_executable
+        data["djangx_version"] = version("djangx")
         return hashlib.sha256(
             json.dumps(data, sort_keys=True, default=str).encode()
         ).hexdigest()

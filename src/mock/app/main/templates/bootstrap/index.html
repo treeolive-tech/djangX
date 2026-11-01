@@ -1,12 +1,11 @@
-{% load static %}
+{% load sass %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Test</title>
-        <link rel="stylesheet"
-              href="{% static 'vendor/bootstrap/css/custom.css' %}">
+        {% custom_css %}
     </head>
     <body>
         <button class="theme-success btn-solid btn-styled" type="button">Test bootstrap</button>

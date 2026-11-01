@@ -213,12 +213,21 @@ MAILERS = {
 # `root`, `helpers` and `utilities/api` are always included.
 # https://getbootstrap.com/docs/6.0/customize/sass/#importing
 
+STATICFILES_FINDERS: list[str] = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "djangx.core.utils.sass.SassFinder",
+]
+
 SASS_INCLUDES: list[str] | None = ["content", "layout", "forms", "buttons"]
 
 SASS_DART_OPTIONS = {
     "style": "compressed",
     "source_map": True,
 }
+
+# Optional Sass command or path; unset to use PATH or install through nodeenv.
+SASS_EXECUTABLE: str | None = None
 
 SASS_THEME_COLORS: dict[str, str] = {
     "primary": "#007bff",
