@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from os import environ, getenv
 from pathlib import Path
+from typing import Literal
 from urllib.parse import parse_qsl, urlparse
 
 from django.utils.csp import CSP
@@ -209,17 +210,13 @@ MAILERS = {
 }
 
 
-# Bootstrap 6 parts to compile, e.g. "buttons", "carousel". Set to None for all of Bootstrap.
-# `root`, `helpers` and `utilities/api` are always included.
-# https://getbootstrap.com/docs/6.0/customize/sass/#importing
+# Sass
 
 STATICFILES_FINDERS: list[str] = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     "djangx.core.utils.sass.SassFinder",
 ]
-
-SASS_INCLUDES: list[str] | None = ["content", "layout", "forms", "buttons"]
 
 SASS_DART_OPTIONS = {
     "style": "compressed",
@@ -229,14 +226,12 @@ SASS_DART_OPTIONS = {
 # Optional Sass command or path; unset to use PATH or install through nodeenv.
 SASS_EXECUTABLE: str | None = None
 
-SASS_THEME_COLORS: dict[str, str] = {
-    "primary": "#007bff",
-    "secondary": "#6c757d",
-    "success": "#28a745",
-    "danger": "#dc3545",
-    "warning": "#ffc107",
-    "info": "#17a2b8",
-}
+BOOTSTRAP_INCLUDES: list[str] | Literal["__all__"] | None = [
+    "content",
+    "layout",
+    "forms",
+    "buttons",
+]
 
 
 # Rest Framework

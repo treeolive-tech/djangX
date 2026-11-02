@@ -5,9 +5,13 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Test</title>
-        {% custom_css %}
+        {% bootstrap_css %}
+        {% sass_css "main/css/mock.css" %}
+        {% sass_css "main/css/mock-extra.css" %}
     </head>
     <body>
         <button class="theme-success btn-solid btn-styled" type="button">Test bootstrap</button>
+        <p class="mock-sass-check">Custom Sass is compiled and loaded.</p>
+        <p class="mock-sass-secondary">Second custom Sass source is compiled and loaded.</p>
     </body>
 </html>

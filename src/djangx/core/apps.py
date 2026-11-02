@@ -10,3 +10,13 @@ class CoreConfig(AppConfig):
     base: Path = CORE_DIR
     static: Path = base / "static"
     resources: Path = base / "resources"
+    vendor: Path = resources / "vendor"
+
+    def ready(self) -> None:
+        """In development, recompile Sass files when they change."""
+        from django.conf import settings
+
+        if settings.DEBUG:
+            from .utils.sass import SassReloader
+
+            SassReloader.connect()

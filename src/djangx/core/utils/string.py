@@ -1,11 +1,29 @@
 """String and URL path helpers."""
 
+import hashlib
+import json
 import re
 from collections.abc import Iterable
 from string import ascii_letters, digits
 from typing import Any
 
-__all__: list[str] = ["max_length_from_choices", "normalize_url_path", "random_string"]
+__all__: list[str] = [
+    "fingerprint",
+    "max_length_from_choices",
+    "normalize_url_path",
+    "random_string",
+]
+
+
+def fingerprint(data: Any) -> str:
+    """Return a stable SHA-256 fingerprint for JSON-compatible data.
+
+    Examples::
+
+        fingerprint({"b": 2, "a": 1})  # stable 64-character hexadecimal hash
+    """
+    payload = json.dumps(data, sort_keys=True, default=str).encode()
+    return hashlib.sha256(payload).hexdigest()
 
 
 def random_string(length: int = 16) -> str:

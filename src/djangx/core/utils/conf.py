@@ -94,17 +94,20 @@ class Conf:
     ) -> list[str]:
         """Return auto-discovered `app.*` apps, then `defaults`, then djangX's apps.
 
+        `djangx.core` comes first among djangX's apps for two reasons: it must precede
+        `django.contrib.staticfiles`, and its `ready()` must connect the Sass recompile
+        receiver before `django_browser_reload` connects its own, so CSS is rebuilt
+        before the browser is told to reload.
+
         Examples::
 
-            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "django_minify_html", ..., "django.contrib.staticfiles"]
+            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "djangx.core", "django_browser_reload", "django_minify_html", ..., "django.contrib.staticfiles"]
         """
         ours: list[str] = [
+            "djangx.core",  # before `django.contrib.staticfiles` and before the reload app
             *cls._optional_apps(debug=debug),
-            *[
-                "djangx.core",  # `djangx.core` must come before `django.contrib.staticfiles`
-                "rest_framework",
-                "django.contrib.staticfiles",
-            ],
+            "rest_framework",
+            "django.contrib.staticfiles",
         ]
         found: list[str] = cls._discover_apps(dir)
         return [*(app for app in [*found, *defaults] if app not in ours), *ours]

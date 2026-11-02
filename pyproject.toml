@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev24"
+version = "0.1.0.dev25"
 description = ""
 readme = "README.md"
 license = "MIT"
