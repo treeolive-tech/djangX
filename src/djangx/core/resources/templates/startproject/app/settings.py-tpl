@@ -16,7 +16,9 @@ from urllib.parse import parse_qsl, urlparse
 
 from django.utils.csp import CSP
 from djangx.core.utils.conf import Conf
+from djangx.types import BootstrapIncludesType
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
 APP_DIR: Path = BASE_DIR / "app"
@@ -47,6 +49,7 @@ INSTALLED_APPS: list[str] = Conf.installed_apps(
         "django.contrib.contenttypes",
         "django.contrib.sessions",
         "django.contrib.messages",
+        "djangx.contrib.sass",
     ],
     dir=APP_DIR,
     debug=DEBUG,
@@ -184,23 +187,14 @@ MAILERS = {
 }
 
 
-# Bootstrap Sass
-
-STATICFILES_FINDERS: list[str] = [
-    "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
-    "djangx.core.utils.sass.SassFinder",
-]
+# Sass
 
 SASS_DART_OPTIONS = {
     "style": "compressed",
     "source_map": True,
 }
 
-# Optional Sass command or path; unset to use PATH or install through nodeenv.
-SASS_EXECUTABLE: str | None = None
-
-BOOTSTRAP_INCLUDES: list[str] | Literal["__all__"] | None = [
+BOOTSTRAP_INCLUDES: BootstrapIncludesType = [
     "content",
     "layout",
     "forms",

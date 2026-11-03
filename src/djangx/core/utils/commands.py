@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Literal
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandParser
 
-from ..apps import CoreConfig
+from ... import PKG_DIR
 
 __all__: list[str] = [
     "FileCommand",
@@ -230,7 +230,7 @@ class _CommandRegistry:
     def __init__(self) -> None:
         self._files: list[Path] = sorted(
             file
-            for file in (CoreConfig.base / "management" / "commands").glob("*.py")
+            for file in PKG_DIR.rglob("management/commands/*.py")
             if not file.stem.startswith("_")
         )
         self.help_commands: set[str] = {"help", "-h"}

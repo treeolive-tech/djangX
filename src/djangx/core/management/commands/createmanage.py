@@ -18,7 +18,7 @@ class Command(FileCommand):
     help = "Create or remove manage.py."
 
     filename = "manage.py"
-    template_file = CoreConfig.resources / "createfile_templates" / "manage.py-tpl"
+    template_file = CoreConfig.resources / "templates" / "createfile" / "manage.py-tpl"
 
     def default_dir(self) -> Path:
         return settings.BASE_DIR

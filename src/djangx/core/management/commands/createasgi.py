@@ -14,4 +14,4 @@ class Command(ServerFileCommand):
     help = "Create or remove asgi.py, and set or reset ASGI_APPLICATION."
 
     filename = "asgi.py"
-    template_file = CoreConfig.resources / "createfile_templates" / "asgi.py-tpl"
+    template_file = CoreConfig.resources / "templates" / "createfile" / "asgi.py-tpl"

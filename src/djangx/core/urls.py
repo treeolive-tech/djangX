@@ -6,6 +6,7 @@ from django.conf import settings
 from django.urls import include, path
 from django.urls.resolvers import URLPattern, URLResolver
 
+from .utils.conf import Conf, project_app_configs
 from .utils.string import normalize_url_path
 
 _used_home_url: bool = False
@@ -58,9 +59,7 @@ def _app_urls() -> list[URLPattern | URLResolver]:
     home: list[URLPattern | URLResolver] = []
     home_app: str = getattr(settings, "HOME_APP", None) or "app.main"
 
-    for config in apps.get_app_configs():
-        if not config.name.startswith("app."):
-            continue
+    for config in project_app_configs():
         module = f"{config.name}.urls"
         if not (find_spec(module) and hasattr(import_module(module), "urlpatterns")):
             continue
@@ -80,7 +79,9 @@ urlpatterns: list[URLPattern | URLResolver] = []
 if settings.DEBUG:
     from django.conf.urls.static import static
 
-    if apps.is_installed("django_browser_reload"):
+    if Conf.debug_app_enabled(
+        "django_browser_reload", debug=settings.DEBUG
+    ) and apps.is_installed("django_browser_reload"):
         urlpatterns.append(
             path(
                 _url_prefix("RELOAD_URL", "__reload__"),

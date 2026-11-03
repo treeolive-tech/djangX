@@ -1,11 +1,17 @@
 """Project settings: finds the project's settings module and builds djangX's settings entries."""
 
 from functools import cache
-from importlib.util import find_spec
 from pathlib import Path
 from typing import ClassVar, final
 
-__all__: list[str] = ["Conf", "SettingsNotFound", "settings_module"]
+from django.apps import AppConfig, apps
+
+__all__: list[str] = [
+    "Conf",
+    "SettingsNotFound",
+    "project_app_configs",
+    "settings_module",
+]
 
 
 class SettingsNotFound(Exception):
@@ -26,6 +32,15 @@ def settings_module() -> str:
     return "app.settings"
 
 
+def project_app_configs() -> list[AppConfig]:
+    """Return installed app configs whose names start with `app.`."""
+    return [
+        app_config
+        for app_config in apps.get_app_configs()
+        if app_config.name.startswith("app.")
+    ]
+
+
 @final
 class Conf:
     __slots__ = ()
@@ -33,43 +48,38 @@ class Conf:
     def __new__(cls):
         raise TypeError(f"{cls.__name__} cannot be instantiated.")
 
-    _MINIFY_HTML_APP: ClassVar[str] = "django_minify_html"
     _HTTP_COMPRESSION_APP: ClassVar[str] = "django_http_compression"
     _RELOAD_APP: ClassVar[str] = "django_browser_reload"
-
-    @staticmethod
-    @cache
-    def _is_installed(module_name: str) -> bool:
-        """Return whether an optional package is importable."""
-        return find_spec(module_name) is not None
+    _DEBUG_APPS: ClassVar[frozenset[str]] = frozenset({_RELOAD_APP})
 
     @classmethod
-    def _optional_apps(cls, *, debug: bool = False) -> list[str]:
-        """Return the optional apps that are available to the current environment."""
-        apps: list[str] = []
-        if debug and cls._is_installed(cls._RELOAD_APP):
-            apps.append(cls._RELOAD_APP)
-        if cls._is_installed(cls._MINIFY_HTML_APP):
-            apps.append(cls._MINIFY_HTML_APP)
-        if cls._is_installed(cls._HTTP_COMPRESSION_APP):
-            apps.append(cls._HTTP_COMPRESSION_APP)
-        return apps
+    def debug_app_enabled(cls, app_name: str, *, debug: bool) -> bool:
+        """Return whether djangX enables an optional app in debug mode."""
+        return debug and app_name in cls._DEBUG_APPS
 
     @classmethod
-    def _optional_middleware(cls, *, debug: bool = False) -> list[str]:
-        """Return optional HTML/request middleware that is currently available. # Request order: compression, then minify, then other HTML modifiers (reload last)."""
-        middleware: list[str] = []
-        if cls._is_installed(cls._HTTP_COMPRESSION_APP):
-            middleware.append(
-                "django_http_compression.middleware.HttpCompressionMiddleware"
-            )
-        if cls._is_installed(cls._MINIFY_HTML_APP):
-            middleware.append("django_minify_html.middleware.MinifyHtmlMiddleware")
-        if debug and cls._is_installed(cls._RELOAD_APP):
-            middleware.append(
-                "django_browser_reload.middleware.BrowserReloadMiddleware"
-            )
-        return middleware
+    def _framework_apps(cls, *, debug: bool = False) -> list[str]:
+        """Return djangX's framework apps, including reload support in debug mode."""
+        return [
+            *(
+                [cls._RELOAD_APP]
+                if cls.debug_app_enabled(cls._RELOAD_APP, debug=debug)
+                else []
+            ),
+            cls._HTTP_COMPRESSION_APP,
+        ]
+
+    @classmethod
+    def _framework_middleware(cls, *, debug: bool = False) -> list[str]:
+        """Return framework middleware in request order, with reload support last."""
+        return [
+            "django_http_compression.middleware.HttpCompressionMiddleware",
+            *(
+                ["django_browser_reload.middleware.BrowserReloadMiddleware"]
+                if cls.debug_app_enabled(cls._RELOAD_APP, debug=debug)
+                else []
+            ),
+        ]
 
     @staticmethod
     def _discover_apps(app_dir: Path) -> list[str]:
@@ -94,18 +104,15 @@ class Conf:
     ) -> list[str]:
         """Return auto-discovered `app.*` apps, then `defaults`, then djangX's apps.
 
-        `djangx.core` comes first among djangX's apps for two reasons: it must precede
-        `django.contrib.staticfiles`, and its `ready()` must connect the Sass recompile
-        receiver before `django_browser_reload` connects its own, so CSS is rebuilt
-        before the browser is told to reload.
+        `djangx.core` comes first among djangX's apps and before the reload app.
 
         Examples::
 
-            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "djangx.core", "django_browser_reload", "django_minify_html", ..., "django.contrib.staticfiles"]
+            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "djangx.core", "django_http_compression", "django.contrib.staticfiles"]
         """
         ours: list[str] = [
-            "djangx.core",  # before `django.contrib.staticfiles` and before the reload app
-            *cls._optional_apps(debug=debug),
+            "djangx.core",
+            *cls._framework_apps(debug=debug),
             "rest_framework",
             "django.contrib.staticfiles",
         ]
@@ -118,7 +125,7 @@ class Conf:
 
         Examples::
 
-            Conf.middleware(["django.middleware.security.SecurityMiddleware"])  # [..., "...HttpCompressionMiddleware", "...MinifyHtmlMiddleware"]
+            Conf.middleware(["django.middleware.security.SecurityMiddleware"])  # [..., "...HttpCompressionMiddleware"]
         """
-        ours = cls._optional_middleware(debug=debug)
+        ours = cls._framework_middleware(debug=debug)
         return [*(m for m in middlewares if m not in ours), *ours]

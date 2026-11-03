@@ -1,51 +1,25 @@
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from ...apps import CoreConfig
-from ...utils.commands import Verbosity
-from ...utils.console import Style, cprint
-from ...utils.sass import Sass
-from ...utils.string import fingerprint
-from ...utils.version import Version
+from .....core.utils.commands import Verbosity
+from .....core.utils.console import Style, cprint
+from .....core.utils.string import fingerprint
+from .....core.utils.version import Version
+from ...utils import Sass, SassBootstrap, SassStatic
 
 
 class Command(BaseCommand):
     help: str = (
         "Manage Sass: --build compiles Bootstrap (if BOOTSTRAP_INCLUDES is set) "
-        "and the .scss/.sass files in your static folders"
+        "and the .scss/.sass files in app static folders"
     )
 
-    BOOTSTRAP_DIR: ClassVar[Path] = CoreConfig.vendor / Sass.BOOTSTRAP_RELATIVE_DIR
     VENV_DIR: ClassVar[Path] = Path(sys.prefix)
-    WATCHED_SETTINGS: ClassVar[tuple[str, ...]] = (
-        "BOOTSTRAP_INCLUDES",
-        "SASS_DART_OPTIONS",
-    )
-
-    # Bootstrap 6 partials in `bootstrap.scss` order. `root` and the trailing
-    # `helpers` / `utilities/api` are always included, so they are not listed here.
-    COMPONENTS: ClassVar[list[str]] = [
-        "content", "layout", "forms", "buttons", "accordion", "alert", "avatar",
-        "badge", "breadcrumb", "chip", "card", "carousel", "datepicker", "dialog",
-        "menu", "list-group", "nav", "nav-overflow", "navbar", "drawer",
-        "pagination", "placeholder", "popover", "progress", "spinner", "stepper",
-        "toasts", "tooltip", "transitions",
-    ]  # fmt: skip
-
-    @property
-    def out(self) -> Path:
-        """Return the compiled Bootstrap CSS file."""
-        return Sass.bootstrap_root() / Sass.CSS_OUTPUT_FILE
-
-    @property
-    def stamp(self) -> Path:
-        """Return the settings-hash file, stored in the parent output folder."""
-        return Sass.output_root() / Sass.STAMP_FILE
 
     def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
@@ -113,7 +87,7 @@ class Command(BaseCommand):
         sass_executable: str | Path | None = None,
         verbosity: Verbosity = Verbosity.NORMAL,
     ) -> None:
-        """Compile Bootstrap (optional) and the project's Sass files under `Sass.output_root()`.
+        """Compile Bootstrap (optional) and the project's Sass files.
 
         Without `if_changed`, everything is rebuilt. With it, Bootstrap is rebuilt only
         when the watched settings changed (or its output is missing), and the project's
@@ -128,27 +102,34 @@ class Command(BaseCommand):
         includes = getattr(settings, "BOOTSTRAP_INCLUDES", None)
         options = dict(getattr(settings, "SASS_DART_OPTIONS", None) or {})
         extra_load_paths = list(options.pop("load_paths", []))
-        scss_dirs = Sass.scss_dirs()
+        sass_dirs = SassStatic.sass_dirs()
 
-        build_fingerprint = fingerprint(
+        shared_fingerprint_data = {
+            "SASS_DART_OPTIONS": getattr(settings, "SASS_DART_OPTIONS", None),
+            "sass_executable": sass_executable,
+            "djangx_version": Version.get("djangx").output,
+        }
+        sass_fingerprint = fingerprint(shared_fingerprint_data)
+        bootstrap_fingerprint = fingerprint(
             {
-                **{
-                    name: getattr(settings, name, None)
-                    for name in self.WATCHED_SETTINGS
-                },
-                "sass_executable": sass_executable,
-                "djangx_version": Version.get("djangx").output,
+                "BOOTSTRAP_INCLUDES": includes,
+                **shared_fingerprint_data,
             }
         )
-        unchanged = (
+        sass_unchanged = (
             if_changed
-            and self.stamp.exists()
-            and self.stamp.read_text() == build_fingerprint
+            and SassStatic.STAMP_FILE.exists()
+            and SassStatic.STAMP_FILE.read_text() == sass_fingerprint
+        )
+        bootstrap_unchanged = (
+            if_changed
+            and SassBootstrap.STAMP_FILE.exists()
+            and SassBootstrap.STAMP_FILE.read_text() == bootstrap_fingerprint
         )
 
         load_paths = [
-            *([str(self.BOOTSTRAP_DIR)] if includes is not None else []),
-            *(str(folder) for folder in scss_dirs),
+            str(SassBootstrap.SOURCE_DIR),
+            *(str(folder) for folder in sass_dirs),
             *extra_load_paths,
         ]
         compile_options = {**options, "load_paths": load_paths}
@@ -157,33 +138,29 @@ class Command(BaseCommand):
         if includes is None:
             # Bootstrap is off: drop everything left over from an earlier configuration
             # (the CSS and its source map); the folder holds nothing else.
-            shutil.rmtree(Sass.bootstrap_root(), ignore_errors=True)
-        elif not (unchanged and self.out.exists()):
-            Sass.compile_scss(
-                self.build_source(includes),
-                self.out,
+            shutil.rmtree(SassBootstrap.OUTPUT_DIR, ignore_errors=True)
+        elif not (bootstrap_unchanged and SassBootstrap.OUTPUT_FILE.exists()):
+            SassBootstrap.compile_css(
+                includes,
                 compile_options,
                 nodeenv_dir=self.VENV_DIR,
                 sass_executable=sass_executable,
                 auto_install=auto_install,
             )
-            built.append(self.out)
+            built.append(SassBootstrap.OUTPUT_FILE)
 
-        if scss_dirs:
-            Sass.compile_dirs(
-                {
-                    folder: Sass.scss_root() / prefix
-                    for folder, prefix in scss_dirs.items()
-                },
+        if sass_dirs:
+            SassStatic.compile_dirs(
+                {folder: folder for folder in sass_dirs},  # CSS goes next to its source
                 compile_options,
                 nodeenv_dir=self.VENV_DIR,
                 sass_executable=sass_executable,
                 auto_install=auto_install,
-                update=bool(unchanged),
+                update=bool(sass_unchanged),
             )
-            built.extend(scss_dirs)
+            built.extend(sass_dirs)
 
-        if includes is None and not scss_dirs:
+        if includes is None and not sass_dirs:
             cprint(
                 "Nothing to compile: BOOTSTRAP_INCLUDES is None and no Sass files were found.",
                 Style.WARNING,
@@ -192,40 +169,13 @@ class Command(BaseCommand):
             )
             return
 
-        self.stamp.parent.mkdir(parents=True, exist_ok=True)
-        self.stamp.write_text(build_fingerprint)
+        SassBootstrap.STAMP_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SassBootstrap.STAMP_FILE.write_text(bootstrap_fingerprint)
+        SassStatic.STAMP_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SassStatic.STAMP_FILE.write_text(sass_fingerprint)
         if built:
             cprint(
-                [
-                    ("Compiled SCSS to ", Style.SUCCESS),
-                    (str(Sass.output_root()), Style.HIGHLIGHT),
-                ],
+                "Compiled SCSS.",
+                Style.SUCCESS,
                 verbosity=verbosity,
             )
-
-    def build_source(self, includes: list[str] | Literal["__all__"] | None) -> str:
-        """Return the SCSS entry file that imports the chosen Bootstrap parts.
-
-        Examples::
-
-            self.build_source("__all__")  # "@use 'bootstrap';"
-            self.build_source(["buttons"])  # "@use 'root';\\n@use 'buttons';\\n@use 'helpers';\\n@use 'utilities/api';"
-            self.build_source(None)  # ""
-        """
-        match includes:
-            case None:
-                return ""
-            case "__all__":
-                lines = ["@use 'bootstrap';"]
-            case _:
-                unknown = sorted(set(includes) - set(self.COMPONENTS))
-                if unknown:
-                    raise CommandError(
-                        f"Unknown BOOTSTRAP_INCLUDES: {', '.join(unknown)}"
-                    )
-
-                chosen = sorted(set(includes), key=self.COMPONENTS.index)
-                names = ["root", *chosen, "helpers", "utilities/api"]
-                lines = [f"@use '{name}';" for name in names]
-
-        return "\n".join(lines)

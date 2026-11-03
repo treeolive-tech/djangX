@@ -1,8 +1,10 @@
 """``djx collectstatic``: Django's `collectstatic`, without Sass sources, plus a Sass build.
 
-The raw `.scss`/`.sass` files are not copied to `STATIC_ROOT`. Instead, once the
-files are collected, `djx sass --build` compiles them into `STATIC_ROOT`. The build
-runs after `--clear` has emptied the folder, so the compiled CSS is never wiped.
+The raw `.scss`/`.sass` files are not copied to `STATIC_ROOT`. Compiled CSS lives in
+static folders (Bootstrap in djangX's own `static/vendor/bootstrap/css/`, your files next to
+their sources), which Django's finders collect like any other static file, so Sass
+is built *before* collecting. `STATIC_ROOT` (and `--clear`) never touches the
+compiled output.
 
 Examples::
 
@@ -23,7 +25,7 @@ from django.contrib.staticfiles.management.commands.collectstatic import (
 )
 from django.core.management import call_command
 
-from ...utils.sass import Sass
+from ...utils import SassBootstrap, SassStatic
 
 
 class Command(CollectStaticCommand):
@@ -41,7 +43,7 @@ class Command(CollectStaticCommand):
         parser.add_argument(
             "--no-sass",
             action="store_true",
-            help="Do not build Sass after collecting static files.",
+            help="Do not build Sass before collecting static files.",
         )
         parser.add_argument(
             "--install-sass",
@@ -50,19 +52,23 @@ class Command(CollectStaticCommand):
         )
 
     def set_options(self, **options: Any) -> None:
-        """Apply Django's options, then also ignore `*.scss` and `*.sass`.
+        """Apply Django's options, then also ignore Sass sources and the build stamp.
 
-        These patterns are added even with `--no-default-ignore`, which only turns
-        off Django's own defaults (`CVS`, `.*`, `*~`).
+        These are added even with `--no-default-ignore`, which only turns off
+        Django's own defaults (`CVS`, `.*`, `*~`).
         """
         super().set_options(**options)
-        self.ignore_patterns = [*self.ignore_patterns, *Sass.SASS_PATTERNS]
+        self.ignore_patterns = [
+            *self.ignore_patterns,
+            *SassStatic.SASS_PATTERNS,
+            SassBootstrap.STAMP_FILE.name,
+            SassStatic.STAMP_FILE.name,
+        ]
         self.build_sass: bool = not options["no_sass"]
         self.install_sass: bool = options["install_sass"]
 
     def collect(self) -> dict[str, list[str]]:
-        """Collect static files, then build Sass (skipped for `--dry-run` and `--no-sass`)."""
-        collected = super().collect()
+        """Build Sass (skipped for `--dry-run` and `--no-sass`), then collect."""
         if self.build_sass and not self.dry_run:
             call_command(
                 "sass",
@@ -70,4 +76,4 @@ class Command(CollectStaticCommand):
                 auto_install=self.install_sass,
                 verbosity=self.verbosity,
             )
-        return collected
+        return super().collect()

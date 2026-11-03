@@ -29,7 +29,9 @@ class Command(StartProjectCommand, NonSystemCheckedCommand):
             else Path.cwd() / options["name"]
         )
         if options["template"] is None:
-            options["template"] = str(CoreConfig.resources / "startproject_templates")
+            options["template"] = str(
+                CoreConfig.resources / "templates" / "startproject"
+            )
         options["extensions"] = [*options["extensions"], "md", "toml"]
         options["vercel"] = platform == "vercel"
         super().handle(**options)

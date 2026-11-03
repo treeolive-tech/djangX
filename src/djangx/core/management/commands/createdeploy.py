@@ -18,7 +18,7 @@ class Command(FileCommand):
     help = "Create or remove the deploy.yml GitHub workflow."
 
     filename = "deploy.yml"
-    template_file = CoreConfig.resources / "createfile_templates" / "deploy.yml-tpl"
+    template_file = CoreConfig.resources / "templates" / "createfile" / "deploy.yml-tpl"
 
     def default_dir(self) -> Path:
         return settings.BASE_DIR / ".github" / "workflows"

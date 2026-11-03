@@ -14,4 +14,4 @@ class Command(ServerFileCommand):
     help = "Create or remove wsgi.py, and set or reset WSGI_APPLICATION."
 
     filename = "wsgi.py"
-    template_file = CoreConfig.resources / "createfile_templates" / "wsgi.py-tpl"
+    template_file = CoreConfig.resources / "templates" / "createfile" / "wsgi.py-tpl"

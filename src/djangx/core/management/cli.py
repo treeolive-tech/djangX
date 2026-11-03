@@ -21,10 +21,11 @@ def _run_builtin(*, scripts_only: bool = False) -> None:
     from django.conf import settings
     from django.core.management import execute_from_command_line, get_commands
 
+    from ...contrib.sass.apps import SassConfig
     from ..apps import CoreConfig
 
     if not settings.configured:
-        settings.configure(INSTALLED_APPS=[CoreConfig.name])
+        settings.configure(INSTALLED_APPS=[CoreConfig.name, SassConfig.name])
         setup()
 
     hidden = command_registry.project_commands if scripts_only else set()

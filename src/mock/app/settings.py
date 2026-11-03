@@ -12,12 +12,12 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from os import environ, getenv
 from pathlib import Path
-from typing import Literal
 from urllib.parse import parse_qsl, urlparse
 
 from django.utils.csp import CSP
 
 from djangx.core.utils.conf import Conf
+from djangx.types import BootstrapIncludesType
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
@@ -56,6 +56,7 @@ INSTALLED_APPS: list[str] = Conf.installed_apps(
         "django.contrib.contenttypes",
         "django.contrib.sessions",
         "django.contrib.messages",
+        "djangx.contrib.sass",
     ],
     dir=APP_DIR,
     debug=DEBUG,
@@ -164,18 +165,14 @@ USE_I18N: bool = True
 USE_TZ: bool = True
 
 
-# Static files (CSS, JavaScript, Images)
+# Static and media files
 # https://docs.djangoproject.com/en/stable/howto/static-files/
+# https://docs.djangoproject.com/en/6.1/ref/settings/#std-setting-MEDIA_ROOT
+# https://docs.djangoproject.com/en/6.1/ref/settings/#std-setting-MEDIA_URL
 
 STATIC_ROOT: Path = PUBLIC_DIR / "static"
 
 STATIC_URL: str = "static/"
-
-
-# Media files
-# https://docs.djangoproject.com/en/6.1/ref/settings/#std-setting-MEDIA_ROOT
-# https://docs.djangoproject.com/en/6.1/ref/settings/#std-setting-MEDIA_URL
-# https://docs.djangoproject.com/en/stable/howto/static-files/#serving-files-uploaded-by-a-user-during-development
 
 MEDIA_ROOT: Path = PUBLIC_DIR / "media"
 
@@ -212,21 +209,12 @@ MAILERS = {
 
 # Sass
 
-STATICFILES_FINDERS: list[str] = [
-    "django.contrib.staticfiles.finders.FileSystemFinder",
-    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
-    "djangx.core.utils.sass.SassFinder",
-]
-
 SASS_DART_OPTIONS = {
     "style": "compressed",
     "source_map": True,
 }
 
-# Optional Sass command or path; unset to use PATH or install through nodeenv.
-SASS_EXECUTABLE: str | None = None
-
-BOOTSTRAP_INCLUDES: list[str] | Literal["__all__"] | None = [
+BOOTSTRAP_INCLUDES: BootstrapIncludesType = [
     "content",
     "layout",
     "forms",
@@ -237,8 +225,6 @@ BOOTSTRAP_INCLUDES: list[str] | Literal["__all__"] | None = [
 # Rest Framework
 # https://www.django-rest-framework.org/
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly"
     ]
