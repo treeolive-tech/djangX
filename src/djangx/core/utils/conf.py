@@ -104,11 +104,23 @@ class Conf:
     ) -> list[str]:
         """Return auto-discovered `app.*` apps, then `defaults`, then djangX's apps.
 
-        `djangx.core` comes first among djangX's apps and before the reload app.
+        djangX's own apps always come last, in this order: `djangx.core`, the browser
+        reload app (only when `debug` is true), `django_http_compression`,
+        `rest_framework`, and `django.contrib.staticfiles`. If `defaults` or a
+        discovered app repeats one of these, the copy is dropped so each app is listed
+        once, in djangX's position.
 
         Examples::
 
-            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "djangx.core", "django_http_compression", "django.contrib.staticfiles"]
+            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")
+            # ["app.blog", "django.contrib.auth", "djangx.core",
+            #  "django_http_compression", "rest_framework",
+            #  "django.contrib.staticfiles"]
+
+            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app", debug=True)
+            # ["app.blog", "django.contrib.auth", "djangx.core",
+            #  "django_browser_reload", "django_http_compression", "rest_framework",
+            #  "django.contrib.staticfiles"]
         """
         ours: list[str] = [
             "djangx.core",

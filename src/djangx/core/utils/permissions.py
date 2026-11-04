@@ -1,12 +1,11 @@
 """Cross-platform permission diagnostics and safe deletion retries."""
 
+import platform
 import stat
 from collections.abc import Callable
 from enum import StrEnum
 from os import name as os_name
 from pathlib import Path
-
-from .platform import platform
 
 __all__: list[str] = [
     "PermissionAction",
@@ -65,6 +64,6 @@ def retry_readonly_delete(
 
 def _platform_name() -> str:
     try:
-        return platform.os_name
+        return platform.system().lower()
     except OSError, ValueError:
         return "windows" if os_name == "nt" else "unknown"

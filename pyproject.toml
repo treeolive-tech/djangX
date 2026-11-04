@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev31"
+version = "0.1.0.dev32"
 description = ""
 readme = "README.md"
 license = "MIT"
@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-postgres = ["psycopg[binary,pool]>=3.3.7"]
+postgres = ["psycopg[binary,pool]>=3.3.8"]
 vercel = ["vercel>=0.12.2"]
 
 [project.scripts]

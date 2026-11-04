@@ -1,5 +1,6 @@
 """Locate, install and run Dart Sass."""
 
+import platform
 import shutil
 import subprocess
 import sys
@@ -14,7 +15,6 @@ from django.core.management.base import CommandError
 
 from ...core.utils.conf import Conf, project_app_configs
 from ...core.utils.console import Style, cprint
-from ...core.utils.platform import platform
 from .apps import SassConfig
 
 __all__: list[str] = [
@@ -65,7 +65,9 @@ class Sass:
 
         # npm uses a different folder for global commands on Windows.
         prefix = (
-            cls._bin_dir(nodeenv_dir) if platform.os_name == "windows" else nodeenv_dir
+            cls._bin_dir(nodeenv_dir)
+            if platform.system().lower() == "windows"
+            else nodeenv_dir
         )
         cls.run([npm, "install", "--global", f"--prefix={prefix}", "sass-embedded"])
 
@@ -151,7 +153,9 @@ class Sass:
     @staticmethod
     def _bin_dir(nodeenv_dir: Path) -> Path:
         """Return the Node.js environment folder where commands are stored."""
-        return nodeenv_dir / ("Scripts" if platform.os_name == "windows" else "bin")
+        return nodeenv_dir / (
+            "Scripts" if platform.system().lower() == "windows" else "bin"
+        )
 
     @classmethod
     def _find_in_nodeenv(cls, name: str, nodeenv_dir: Path) -> str | None:

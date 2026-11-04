@@ -8,7 +8,7 @@ class Command(NonSystemCheckedCommand):
 
     Examples::
 
-        python manage.py random              # 16 characters, copied
+        python manage.py random              # 50 characters, copied
         python manage.py random -l 32 --no-clipboard
     """
 
@@ -20,8 +20,8 @@ class Command(NonSystemCheckedCommand):
             "-l",
             "--length",
             type=int,
-            default=16,
-            help="Number of characters to generate (default: 16).",
+            default=50,
+            help="Number of characters to generate (default: 50).",
         )
         parser.add_argument(
             "--no-clipboard",
@@ -38,12 +38,9 @@ class Command(NonSystemCheckedCommand):
             return
 
         try:
-            from ...utils.copy import copy
+            import pyperclip
 
-            if not copy(source=random_str, verbosity=Verbosity.QUIET):
-                from ...utils.exit import Exit
-
-                raise SystemExit(Exit.ERROR)
+            pyperclip.copy(random_str)
             cprint(
                 "✓ Copied to clipboard!",
                 Style.SUCCESS,
