@@ -1,12 +1,13 @@
-"""Locate, install and run Dart Sass."""
+# ramani: src/djangx/contrib/sass/utils.py
+"""Locate and run Dart Sass."""
 
-import platform
+import os
+import re
 import shutil
 import subprocess
-import sys
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any, ClassVar, Literal, final
 
@@ -15,12 +16,14 @@ from django.core.management.base import CommandError
 
 from ...core.utils.conf import Conf, project_app_configs
 from ...core.utils.console import Style, cprint
+from ...core.utils.djangx_dir import DjangxDir
 from .apps import SassConfig
 
 __all__: list[str] = [
     "Sass",
     "SassBootstrap",
     "SassCompilerError",
+    "SassGitignore",
     "SassStatic",
     "SassWatcher",
 ]
@@ -38,65 +41,20 @@ class Sass:
         raise TypeError(f"{cls.__name__} cannot be instantiated.")
 
     @classmethod
-    def install_sass(cls, nodeenv_dir: Path) -> str:
-        """Install Sass in the project's Node.js folder and return its command path."""
-        if sass := cls._find_in_nodeenv("sass", nodeenv_dir):
-            return sass
-
-        if cls._find_in_nodeenv("node", nodeenv_dir) is None:
-            if sys.prefix == sys.base_prefix:
-                raise SassCompilerError(
-                    "Installing Sass needs an active virtual environment."
-                )
-            cls.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "nodeenv",
-                    "--node=lts",
-                    "--python-virtualenv",
-                    str(nodeenv_dir),
-                ]
-            )
-
-        npm = cls._find_in_nodeenv("npm", nodeenv_dir)
-        if npm is None:
-            raise SassCompilerError("npm was not found in the Node.js environment.")
-
-        # npm uses a different folder for global commands on Windows.
-        prefix = (
-            cls._bin_dir(nodeenv_dir)
-            if platform.system().lower() == "windows"
-            else nodeenv_dir
-        )
-        cls.run([npm, "install", "--global", f"--prefix={prefix}", "sass-embedded"])
-
-        sass = cls._find_in_nodeenv("sass", nodeenv_dir)
-        if sass is None:
-            raise SassCompilerError(
-                "sass-embedded was installed, but its `sass` command was not found."
-            )
-        return sass
-
-    @classmethod
     def compile_source(
         cls,
         source: str,
         output: Path,
         options: Mapping[str, Any] | None = None,
         *,
-        nodeenv_dir: Path,
         sass_executable: str | Path | None = None,
-        auto_install: bool = False,
     ) -> None:
         """Compile SCSS text into a CSS file.
 
         The SCSS text is sent to Sass through standard input. `options` become Sass
         command-line flags; source maps are off unless requested.
         """
-        executable = cls.resolve(
-            Path(nodeenv_dir), executable=sass_executable, auto_install=auto_install
-        )
+        executable = cls.resolve(sass_executable)
         command = [executable, "--stdin", *cls._flags(options)]
         output.parent.mkdir(parents=True, exist_ok=True)
         cls.run([*command, str(output)], stdin=source)
@@ -123,14 +81,11 @@ class Sass:
         return flags
 
     @classmethod
-    def resolve(
-        cls,
-        nodeenv_dir: Path,
-        *,
-        executable: str | Path | None,
-        auto_install: bool,
-    ) -> str:
-        """Choose which Sass command to run, or explain how to get one."""
+    def resolve(cls, executable: str | Path | None = None) -> str:
+        """Return the Sass command to run, or explain how to get one.
+
+        Uses `executable` if given, otherwise the `sass` command on `PATH`.
+        """
         if executable is not None:
             found = shutil.which(str(Path(executable).expanduser()))
             if found is None:
@@ -139,28 +94,31 @@ class Sass:
                 )
             return found
 
-        if found := cls._find_in_nodeenv("sass", nodeenv_dir) or shutil.which("sass"):
+        if found := shutil.which("sass"):
             return found
 
-        if auto_install:
-            return cls.install_sass(nodeenv_dir)
-
         raise SassCompilerError(
-            "Dart Sass was not found. Set SASS_EXECUTABLE, pass `--sass-executable`, "
-            "or run `djx sass --install`."
+            "Dart Sass was not found. Install it so the `sass` command is on your PATH "
+            "(see https://sass-lang.com/install), or set SASS_EXECUTABLE / pass "
+            "`--sass-executable`."
         )
 
-    @staticmethod
-    def _bin_dir(nodeenv_dir: Path) -> Path:
-        """Return the Node.js environment folder where commands are stored."""
-        return nodeenv_dir / (
-            "Scripts" if platform.system().lower() == "windows" else "bin"
-        )
+    _versions: ClassVar[dict[str, str]] = {}
 
     @classmethod
-    def _find_in_nodeenv(cls, name: str, nodeenv_dir: Path) -> str | None:
-        """Find a command such as `sass` or `node` inside the Node.js environment."""
-        return shutil.which(name, path=str(cls._bin_dir(nodeenv_dir)))
+    def version(cls, executable: str) -> str:
+        """Return what `sass --version` prints, remembered for this process.
+
+        Used in the build fingerprints so upgrading Sass rebuilds the CSS. Returns
+        `"unknown"` (not remembered) if the command fails; the build itself will
+        then report the real problem.
+        """
+        if executable not in cls._versions:
+            try:
+                cls._versions[executable] = cls.run([executable, "--version"]).strip()
+            except SassCompilerError:
+                return "unknown"
+        return cls._versions[executable]
 
     @staticmethod
     def run(command: list[str], *, stdin: str | None = None) -> str:
@@ -188,31 +146,63 @@ class SassStatic:
 
     SASS_PATTERNS: ClassVar[tuple[str, ...]] = ("*.scss", "*.sass")
 
-    STAMP_FILE: ClassVar[Path] = SassConfig.static / ".sass-settings-hash"
+    SASS_SUFFIXES: ClassVar[tuple[str, ...]] = tuple(
+        pattern.removeprefix("*") for pattern in SASS_PATTERNS
+    )
+
+    @staticmethod
+    def stamp_file() -> Path:
+        """Return where the project Sass build fingerprint is stored."""
+        return DjangxDir.path() / "sass" / "project.hash"
+
+    @staticmethod
+    def static_dirs() -> list[Path]:
+        """Return each project app's `static` folder, without looking inside them."""
+        folders: list[Path] = []
+        for app_config in project_app_configs():
+            folder = (Path(app_config.path) / "static").resolve()
+            if folder.is_dir() and folder not in folders:
+                folders.append(folder)
+        return folders
+
+    @classmethod
+    def iter_sources(cls, folder: Path) -> Iterator[os.DirEntry[str]]:
+        """Yield every `.scss` / `.sass` file under `folder` in a single walk.
+
+        Symbolic links to folders are not followed. Folders that disappear or can't
+        be read while walking are skipped.
+        """
+        pending = [str(folder)]
+        while pending:
+            try:
+                with os.scandir(pending.pop()) as scanner:
+                    entries = list(scanner)
+            except OSError:
+                continue
+            for entry in entries:
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(entry.path)
+                elif entry.name.endswith(cls.SASS_SUFFIXES) and entry.is_file():
+                    yield entry
 
     @classmethod
     def sass_dirs(cls) -> list[Path]:
         """Find app `static` folders that contain `.scss` or `.sass` files."""
-        sass_folders: list[Path] = []
-        for app_config in project_app_configs():
-            folder = (Path(app_config.path) / "static").resolve()
-            if (
-                folder.is_dir()
-                and folder not in sass_folders
-                and any(
-                    file.is_file()
-                    for pattern in cls.SASS_PATTERNS
-                    for file in folder.rglob(pattern)
-                )
-            ):
-                sass_folders.append(folder)
-        return sass_folders
+        return [
+            folder
+            for folder in cls.static_dirs()
+            if next(cls.iter_sources(folder), None) is not None
+        ]
 
     @classmethod
     def source_for(cls, css_path: str) -> tuple[Path, Path] | None:
-        """Find the Sass source for a static CSS path, or return `None`."""
+        """Find the Sass source for a static CSS path, or return `None`.
+
+        Only the exact candidate files are checked, so a path with no Sass source
+        costs a few file checks instead of a scan of every static folder.
+        """
         css_without_extension = css_path.lstrip("/").removesuffix(".css")
-        for folder in cls.sass_dirs():
+        for folder in cls.static_dirs():
             for suffix in (".scss", ".sass"):
                 source_file = (folder / f"{css_without_extension}{suffix}").resolve()
                 if source_file.is_relative_to(folder) and source_file.is_file():
@@ -225,9 +215,7 @@ class SassStatic:
         mappings: Mapping[Path, Path],
         options: Mapping[str, Any] | None = None,
         *,
-        nodeenv_dir: Path,
         sass_executable: str | Path | None = None,
-        auto_install: bool = False,
         update: bool = True,
     ) -> None:
         """Compile Sass folders, optionally updating only stale files.
@@ -238,9 +226,7 @@ class SassStatic:
         """
         if not mappings:
             return
-        executable = Sass.resolve(
-            Path(nodeenv_dir), executable=sass_executable, auto_install=auto_install
-        )
+        executable = Sass.resolve(sass_executable)
         command = [executable, *Sass._flags(options)]
         if update:
             command.append("--update")
@@ -248,6 +234,110 @@ class SassStatic:
             destination.mkdir(parents=True, exist_ok=True)
             command.append(f"{source}:{destination}")
         Sass.run(command)
+
+
+@final
+class SassGitignore:
+    """Keep generated CSS out of git with a managed block in `.gitignore`.
+
+    Compiled CSS is written beside its Sass source, so each Sass static folder gets a
+    `.gitignore` listing exactly the files Sass generates there (`site.css` and
+    `site.css.map` for `site.scss`). Hand-written CSS is never listed. Everything
+    between the start and end markers belongs to djangX and is rewritten on every
+    build; any other line in the file is left alone.
+    """
+
+    __slots__ = ()
+
+    def __new__(cls):
+        raise TypeError(f"{cls.__name__} cannot be instantiated.")
+
+    FILE_NAME: ClassVar[str] = ".gitignore"
+
+    START: ClassVar[str] = (
+        "# >>> djangx sass: generated CSS (managed automatically, do not edit) >>>"
+    )
+
+    END: ClassVar[str] = "# <<< djangx sass <<<"
+
+    @staticmethod
+    def _escape(path: str) -> str:
+        """Escape characters that `.gitignore` treats as pattern syntax."""
+        escaped = re.sub(r"([\\*?\[\]])", r"\\\1", path)
+        return escaped[:-1] + "\\ " if escaped.endswith(" ") else escaped
+
+    @classmethod
+    def entries(cls, folder: Path) -> list[str]:
+        """Return anchored ignore patterns for the CSS built from sources in `folder`.
+
+        Partials (names starting with `_`) produce no CSS, so they are skipped.
+
+        Examples::
+
+            SassGitignore.entries(Path("app/blog/static"))
+            # ["/blog/css/site.css", "/blog/css/site.css.map"]
+        """
+        outputs: set[str] = set()
+        for entry in SassStatic.iter_sources(folder):
+            if entry.name.startswith("_"):
+                continue
+            css = Path(entry.path).relative_to(folder).with_suffix(".css").as_posix()
+            outputs.update({css, f"{css}.map"})
+        return [f"/{cls._escape(path)}" for path in sorted(outputs)]
+
+    @classmethod
+    def sync(cls, folder: Path) -> bool:
+        """Create or update the managed block in `folder/.gitignore`.
+
+        Returns `True` if the file was written. Nothing is written when the file is
+        already correct, when there is nothing to ignore, when the file can't be read
+        or written, or when it has a start marker without an end marker (it is left
+        exactly as the user has it rather than guessing what to overwrite).
+        """
+        path = folder / cls.FILE_NAME
+        entries = cls.entries(folder)
+        managed = [cls.START, *entries, cls.END]
+
+        existing: str | None = None
+        try:
+            if path.is_file():
+                existing = path.read_bytes().decode("utf-8")
+        except OSError, UnicodeDecodeError:
+            return False
+
+        newline = "\r\n" if existing and "\r\n" in existing else "\n"
+        lines = existing.replace("\r\n", "\n").split("\n") if existing else []
+        if lines and lines[-1] == "":
+            lines.pop()  # the file's final newline
+
+        starts = [i for i, line in enumerate(lines) if line.strip() == cls.START]
+        if starts:
+            start = starts[0]
+            end = next(
+                (
+                    i
+                    for i in range(start + 1, len(lines))
+                    if lines[i].strip() == cls.END
+                ),
+                None,
+            )
+            if end is None:
+                return False
+            updated = [*lines[:start], *managed, *lines[end + 1 :]]
+        elif not entries:
+            return False
+        else:
+            separator = [""] if lines and lines[-1].strip() else []
+            updated = [*lines, *separator, *managed]
+
+        text = newline.join(updated) + newline
+        if text == existing:
+            return False
+        try:
+            path.write_bytes(text.encode("utf-8"))
+        except OSError:
+            return False
+        return True
 
 
 @final
@@ -261,13 +351,22 @@ class SassBootstrap:
 
     SOURCE_DIR: ClassVar[Path] = SassConfig.resources / "vendor" / "bootstrap" / "scss"
 
-    OUTPUT_DIR: ClassVar[Path] = SassConfig.static / "vendor" / "bootstrap" / "css"
+    STATIC_PATH: ClassVar[str] = "vendor/bootstrap/css/compiled.css"
 
-    OUTPUT_FILE: ClassVar[Path] = OUTPUT_DIR / "compiled.css"
+    @classmethod
+    def output_file(cls) -> Path:
+        """Return the compiled CSS file, inside the project's `.djangx/static`."""
+        return DjangxDir.static_dir() / cls.STATIC_PATH
 
-    STATIC_PATH: ClassVar[str] = OUTPUT_FILE.relative_to(SassConfig.static).as_posix()
+    @classmethod
+    def output_dir(cls) -> Path:
+        """Return the folder holding the compiled CSS and its source map."""
+        return cls.output_file().parent
 
-    STAMP_FILE: ClassVar[Path] = OUTPUT_DIR / ".settings-hash"
+    @staticmethod
+    def stamp_file() -> Path:
+        """Return where the Bootstrap build fingerprint is stored."""
+        return DjangxDir.path() / "sass" / "bootstrap.hash"
 
     # `root` and the trailing `helpers` / `utilities/api` are always included.
     COMPONENTS: ClassVar[list[str]] = [
@@ -305,18 +404,14 @@ class SassBootstrap:
         includes: list[str] | Literal["__all__"] | None,
         options: Mapping[str, Any] | None = None,
         *,
-        nodeenv_dir: Path,
         sass_executable: str | Path | None = None,
-        auto_install: bool = False,
     ) -> None:
-        """Compile the configured Bootstrap components to `OUTPUT_FILE`."""
+        """Compile the configured Bootstrap components to `output_file()`."""
         Sass.compile_source(
             cls.build_source(includes),
-            cls.OUTPUT_FILE,
+            cls.output_file(),
             options,
-            nodeenv_dir=nodeenv_dir,
             sass_executable=sass_executable,
-            auto_install=auto_install,
         )
 
 
@@ -367,9 +462,7 @@ class SassWatcher:
     @staticmethod
     def _browser_reload_file_changed(*, file_path: Path, **kwargs: Any) -> bool | None:
         """Ignore Sass source events and forward other changes to browser reload."""
-        if file_path.suffix in {
-            Path(pattern).suffix for pattern in SassStatic.SASS_PATTERNS
-        }:
+        if file_path.suffix in SassStatic.SASS_SUFFIXES:
             return True
 
         from django_browser_reload.views import on_file_changed
@@ -391,12 +484,11 @@ class SassWatcher:
     def _snapshot(root: Path) -> dict[Path, int]:
         """Remember when each Sass file under this folder was last changed."""
         files: dict[Path, int] = {}
-        for pattern in SassStatic.SASS_PATTERNS:
-            for file in root.rglob(pattern):
-                try:
-                    files[file] = file.stat().st_mtime_ns
-                except OSError:
-                    continue  # removed while scanning
+        for entry in SassStatic.iter_sources(root):
+            try:
+                files[Path(entry.path)] = entry.stat().st_mtime_ns
+            except OSError:
+                continue  # removed while scanning
         return files
 
     @classmethod

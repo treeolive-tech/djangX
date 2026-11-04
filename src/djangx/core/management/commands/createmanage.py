@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/management/commands/createmanage.py
 """``djx createmanage``: create or remove `manage.py`.
 
 Examples::

@@ -1,10 +1,14 @@
+# ramani: src/djangx/core/utils/conf.py
 """Project settings: finds the project's settings module and builds djangX's settings entries."""
 
+from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
 from typing import ClassVar, final
 
 from django.apps import AppConfig, apps
+
+from .djangx_dir import DjangxDir
 
 __all__: list[str] = [
     "Conf",
@@ -100,27 +104,15 @@ class Conf:
 
     @classmethod
     def installed_apps(
-        cls, defaults: list[str], *, dir: Path, debug: bool = False
+        cls, defaults: list[str], *, app_dir: Path, debug: bool = False
     ) -> list[str]:
         """Return auto-discovered `app.*` apps, then `defaults`, then djangX's apps.
 
-        djangX's own apps always come last, in this order: `djangx.core`, the browser
-        reload app (only when `debug` is true), `django_http_compression`,
-        `rest_framework`, and `django.contrib.staticfiles`. If `defaults` or a
-        discovered app repeats one of these, the copy is dropped so each app is listed
-        once, in djangX's position.
+        `djangx.core` comes first among djangX's apps and before the reload app.
 
         Examples::
 
-            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")
-            # ["app.blog", "django.contrib.auth", "djangx.core",
-            #  "django_http_compression", "rest_framework",
-            #  "django.contrib.staticfiles"]
-
-            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app", debug=True)
-            # ["app.blog", "django.contrib.auth", "djangx.core",
-            #  "django_browser_reload", "django_http_compression", "rest_framework",
-            #  "django.contrib.staticfiles"]
+            Conf.installed_apps(["django.contrib.auth"], dir=BASE_DIR / "app")  # ["app.blog", "django.contrib.auth", "djangx.core", "django_http_compression", "django.contrib.staticfiles"]
         """
         ours: list[str] = [
             "djangx.core",
@@ -128,8 +120,33 @@ class Conf:
             "rest_framework",
             "django.contrib.staticfiles",
         ]
-        found: list[str] = cls._discover_apps(dir)
+        found: list[str] = cls._discover_apps(app_dir)
         return [*(app for app in [*found, *defaults] if app not in ours), *ours]
+
+    @classmethod
+    def staticfiles_dirs(
+        cls,
+        dirs: Sequence[str | Path | tuple[str, str | Path]] = (),
+        *,
+        base_dir: Path,
+    ) -> list[str | Path | tuple[str, str | Path]]:
+        """Return `dirs` followed by djangX's generated static folder, `.djangx/static`.
+
+        Your folders come first, so a file there wins over one of the same name in
+        `.djangx/static`. That folder holds generated files such as the compiled
+        Bootstrap CSS, so Django can serve it in development and `collectstatic` can
+        collect it. A repeat of it in `dirs` is dropped.
+
+        Examples::
+
+            Conf.staticfiles_dirs(base_dir=BASE_DIR)  # [BASE_DIR / ".djangx" / "static"]
+            Conf.staticfiles_dirs([BASE_DIR / "assets"], base_dir=BASE_DIR)  # [BASE_DIR / "assets", BASE_DIR / ".djangx" / "static"]
+        """
+        ours = DjangxDir.static_dir(base_dir)
+        return [
+            *(d for d in dirs if isinstance(d, (list, tuple)) or Path(d) != ours),
+            ours,
+        ]
 
     @classmethod
     def middleware(cls, middlewares: list[str], *, debug: bool = False) -> list[str]:

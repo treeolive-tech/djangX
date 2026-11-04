@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/checks.py
 """System checks for djangX configuration."""
 
 from typing import Any
@@ -13,6 +14,7 @@ SETTING_APP_REQUIREMENTS: dict[str, str] = {
     "BOOTSTRAP_INCLUDES": SassConfig.name,
     "SASS_DART_OPTIONS": SassConfig.name,
     "SASS_EXECUTABLE": SassConfig.name,
+    "SASS_GITIGNORE": SassConfig.name,
 }
 
 

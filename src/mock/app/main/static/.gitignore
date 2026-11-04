@@ -1,0 +1,7 @@
+# ramani: src/mock/app/main/static/.gitignore
+# >>> djangx sass: generated CSS (managed automatically, do not edit) >>>
+/main/css/mock-extra.css
+/main/css/mock-extra.css.map
+/main/css/mock.css
+/main/css/mock.css.map
+# <<< djangx sass <<<

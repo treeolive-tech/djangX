@@ -1,3 +1,4 @@
+# ramani: src/mock/app/main/views.py
 from django.shortcuts import render
 
 

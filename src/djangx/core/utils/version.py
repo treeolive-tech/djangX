@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/utils/version.py
 """Version lookup utilities."""
 
 from typing import Literal, NamedTuple, final

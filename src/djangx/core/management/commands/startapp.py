@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/management/commands/startapp.py
 import re
 from contextlib import suppress
 from pathlib import Path

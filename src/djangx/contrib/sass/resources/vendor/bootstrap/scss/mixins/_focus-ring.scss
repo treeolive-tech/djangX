@@ -1,3 +1,4 @@
+// ramani: src/djangx/contrib/sass/resources/vendor/bootstrap/scss/mixins/_focus-ring.scss
 @mixin focus-ring($offset: false, $color: null) {
   @if $color != null {
     outline: var(--focus-ring-width) solid #{$color};

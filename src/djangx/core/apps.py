@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/apps.py
 from pathlib import Path
 
 from django.apps import AppConfig
@@ -13,3 +14,9 @@ class CoreConfig(AppConfig):
 
     def ready(self) -> None:
         from . import checks  # noqa: F401
+        from .utils.djangx_dir import DjangxDir
+
+        try:
+            DjangxDir.ensure()
+        except OSError:
+            pass  # A read-only deployment doesn't need `.djangx` while running.

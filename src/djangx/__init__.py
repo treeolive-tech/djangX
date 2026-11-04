@@ -1,3 +1,4 @@
+# ramani: src/djangx/__init__.py
 from pathlib import Path
 
 PKG_DIR: Path = Path(__file__).resolve().parent

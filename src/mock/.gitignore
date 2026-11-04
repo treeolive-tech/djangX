@@ -1,4 +1,6 @@
+# ramani: src/mock/.gitignore
 # Environment
+/.djangx/
 /.env*
 
 # SQLite database

@@ -51,7 +51,7 @@ INSTALLED_APPS: list[str] = Conf.installed_apps(
         "django.contrib.messages",
         "djangx.contrib.sass",
     ],
-    dir=APP_DIR,
+    app_dir=APP_DIR,
     debug=DEBUG,
 )
 
@@ -155,6 +155,8 @@ USE_TZ: bool = True
 STATIC_ROOT: Path = PUBLIC_DIR / "static"
 
 STATIC_URL: str = "static/"
+
+STATICFILES_DIRS = Conf.staticfiles_dirs([], base_dir=BASE_DIR)
 
 MEDIA_ROOT: Path = PUBLIC_DIR / "media"
 

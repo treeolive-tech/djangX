@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/management/cli.py
 """Command-line entry point."""
 
 from sys import argv

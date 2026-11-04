@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/utils/permissions.py
 """Cross-platform permission diagnostics and safe deletion retries."""
 
 import platform

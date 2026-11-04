@@ -1,21 +1,25 @@
+# ramani: pyproject.toml
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
 
 [project]
 name = "djangX"
-version = "0.1.0.dev32"
+version = "0.1.0.dev34"
 description = ""
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
 maintainers = [{ name = "Kevin Wakhisi", email = "kevin@treeolive.tech" }]
+requires-python = ">=3.14"
+keywords = ["djangx", "django", "bootstrap", "sass"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.15",
     "Framework :: Django",
@@ -23,14 +27,11 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = ["djangx", "django", "bootstrap", "sass"]
-requires-python = ">=3.14"
 dependencies = [
     "django>=6.1.3",
     "django-browser-reload>=1.21.0",
     "django-http-compression[brotli]>=1.4.0",
     "djangorestframework>=3.18.3",
-    "nodeenv>=1.12.0",
     "pillow>=13.0.0",
     "pyperclip>=1.11.0",
     "python-dotenv>=1.2.4",
@@ -48,17 +49,27 @@ djx = "djangx.core.management.cli:main"
 Repository = "https://github.com/treeolive-tech/djangX.git"
 
 [dependency-groups]
-dev = ["django-stubs>=6.1.2", "djlint>=1.49.9", "poethepoet>=0.49.0"]
+dev = [
+    "django-stubs>=6.1.2",
+    "djlint>=1.49.9",
+    "poethepoet>=0.49.0",
+    "ramani>=0.1.0a3",
+]
 
 [tool.uv]
 preview-features = ["format-command", "check-command"]
 
 [tool.poe.tasks.format]
-sequence = [{ cmd = "uv format" }, { cmd = "djlint . --reformat" }]
+sequence = [
+    { cmd = "uv run ramani" },
+    { cmd = "uv format" },
+    { cmd = "djlint . --reformat" },
+]
 
 [tool.poe.tasks.lint]
 sequence = [
     { cmd = "uv lock --check" },
+    { cmd = "uv run ramani --check" },
     { cmd = "uv format --check" },
     { cmd = "uv check" },
     { cmd = "djlint . --check" },

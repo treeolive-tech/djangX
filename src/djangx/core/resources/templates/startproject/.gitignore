@@ -1,3 +1,4 @@
+# ramani: src/djangx/core/resources/templates/startproject/.gitignore
 # Environment
 /.venv/
 /.env*
