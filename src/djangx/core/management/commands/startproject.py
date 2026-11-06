@@ -12,12 +12,14 @@ from django.test import override_settings
 from ...apps import CoreConfig
 from ...utils.commands import NonSystemCheckedCommand, Verbosity
 from ...utils.console import Style, cprint
+from ...utils.version import Version
 
 
 class Command(StartProjectCommand, NonSystemCheckedCommand):
     help = "Create a djangX project with settings in app/."
     rewrite_template_suffixes = (
         *StartProjectCommand.rewrite_template_suffixes,
+        (".gitignore-tpl", ".gitignore"),
         (".md-tpl", ".md"),
         (".toml-tpl", ".toml"),
     )
@@ -35,6 +37,7 @@ class Command(StartProjectCommand, NonSystemCheckedCommand):
             )
         options["extensions"] = [*options["extensions"], "md", "toml"]
         options["vercel"] = platform == "vercel"
+        options["djangx_version"] = Version.get("djangx").output
         super().handle(**options)
         with override_settings(APP_DIR=target / "app"):
             call_command("startapp", "main", verbosity=Verbosity.QUIET)

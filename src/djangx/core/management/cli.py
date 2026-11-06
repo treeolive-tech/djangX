@@ -108,7 +108,7 @@ def main() -> None:
                 Style.INFO,
             )
 
-        case "-v" | "--version" | "version":
+        case "-V" | "--version" | "version":
             from ..utils.version import print_version
 
             raise SystemExit(print_version(PKG_NAME))

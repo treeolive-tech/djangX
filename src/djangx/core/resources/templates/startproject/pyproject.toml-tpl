@@ -3,7 +3,7 @@ name = "{{ project_name }}"
 version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = ["djangx{% if vercel %}[postgres,vercel]{% endif %}>=0.1.0.dev34"]
+dependencies = ["djangx{% if vercel %}[postgres,vercel]{% endif %}>={{ djangx_version }}"]
 {% if vercel %}
 [tool.vercel.scripts]
 build = "npm i -g sass-embedded && djx makemigrations && djx migrate"

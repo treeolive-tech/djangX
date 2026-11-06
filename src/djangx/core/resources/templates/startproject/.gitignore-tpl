@@ -1,7 +1,7 @@
-# ramani: src/djangx/core/resources/templates/startproject/.gitignore
 # Environment
 /.venv/
 /.env*
+/.djangx/
 
 # SQLite database
 /db.sqlite3
